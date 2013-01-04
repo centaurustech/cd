@@ -1,0 +1,5 @@
+2012-12-09 0:15:37 - webServiceRequest(doWebPayment) - Location : https://services.payline.com/V4/services/WebPaymentAPI
+2012-12-09 0:17:43 - webServiceRequest(getWebPaymentDetails) - Location : https://services.payline.com/V4/services/WebPaymentAPI
+2012-12-09 14:08:21 - webServiceRequest(doWebPayment) - Location : https://services.payline.com/V4/services/WebPaymentAPI
+2012-12-09 14:10:18 - webServiceRequest(getWebPaymentDetails) - Location : https://services.payline.com/V4/services/WebPaymentAPI
+2012-12-09 14:10:19 - webServiceRequest(getWebPaymentDetails) - Location : https://services.payline.com/V4/services/WebPaymentAPI

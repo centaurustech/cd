@@ -1,0 +1,16 @@
+{* Smarty *}
+
+<div id="menu_bar">
+  <div id="menus">
+    
+    {* ACCUEIL *}
+    <a href="http://{ConfigurationCore::get('PS_SHOP_DOMAIN')}" class="menu">Accueil</a>
+
+    {* CATEGORIES *}
+    {foreach from=Category::getHomeCategories(1) item=categ}
+    <div class="sep"></div>
+    <a href="{$link->getCategoryLink($categ.id_category, Category::getLinkRewrite($categ.id_category, 2), 2)}" class="menu">{$categ.name}</a>
+    {/foreach}
+
+  </div>
+</div>

@@ -1,0 +1,144 @@
+/*
+License: GNU General Public License v3.0
+License URI: http://www.gnu.org/licenses/gpl.html
+Theme Name: WP WordFinder
+Theme URI: http://wordfinder.llow.it/wordpress/
+Author: Lorenzo Lagana'
+Author URI: http://www.llow.it
+Description: Wordfinder is a minimalist theme for wordpress.Provides two kind of index page, diary and minimal, 5 Widget area, 6 Colors,  and a theme options page with the possibility to insert your logo, Adsense manage system, disabable/enable sidebar-subfooter, popular post widget, social network link and many other functions.
+Tags: orange, blue, red, green, light, two-columns, fixed-width, custom-colors, theme-options, right-sidebar, custom-menu
+Version: 1.0
+*/
+
+/* Print CSS */
+
+/* General */
+body{background: #fff; font-family:sans-serif; color:#000;}
+*{padding: 0; margin: 0;}
+a:focus{outline: 0;}
+
+ /* General Elements */
+a, a:link, a:focus, a:active,a:visited{color: #000; background: transparent; text-decoration: none; }
+a:hover {color: #000;}
+p{line-height: 18px; font-size: 12px; width:100%; color:#000;  text-align: justify; margin:10px 0 10px 0;}
+h1{font-size: 24px; line-height: 24px; font-weight: normal; letter-spacing: -1px; color:#000;}
+h2{font-size: 18px; line-height: 30px; color: #000; font-weight: normal; letter-spacing: -1px; margin: 0px 0 5px 0;}
+h3{font-size: 16px; line-height: 24px; color: #000; font-weight: normal; letter-spacing: 0px; margin: 0px 0 5px 0;}
+h4{font-size: 14px; color: #555; letter-spacing: -1px; font-weight: normal; margin: 0px 0 5px 0;}
+h5{font-size: 12px; margin: 5px 0; color: #000; font-weight: normal;}
+h6{font-size: 11px; margin: 5px 0; color: #000; font-weight: normal;}
+ul{list-style:circle; list-style-position: inside; margin:0 0 20px 0; width: auto; display:inline; color:#000;}
+ol{margin: 5px; padding-left: 20px; list-style: decimal;}
+li{font-size: 11px; color: #000; line-height: 18px;}
+dt{padding-left: 1.8em;}
+dd{padding-left: 3.6em;}
+strong{font-weight: normal;}
+em{font-style: italic;}
+blockquote{background: #f3f3f3; margin: 10px 0; height: auto; border: 1px solid #ddd; padding: 15px;}
+blockquote p{line-height: 20px; font-style: italic; color: #000; text-align: justify;}
+pre{background: #f3f3f3; margin: 10px 0; height: auto; border: 1px solid #aaa; font-size: 11px;}
+code{line-height: 20px;}
+underline{text-decoration: underline;}
+strike{text-decoration: line-through;}
+small{margin: 1em 0;}
+form textarea{width: 500px; border: 1px solid #ccc; margin: 0; color: #000; background: #f5f5f5;}
+form input{border: 1px solid #ccc; margin: 0; color: #000; background: #f5f5f5; width: 500px; height: 30px; line-height: 30px;}
+form input:focus, form textarea:focus{color: #000; background: #fff;}
+label{color: #000; line-height: 20px; height: 20px; }
+
+ /* General Elements Images on post and pages */
+img{border: 1px solid #eee; padding: 5px; background: #f7f7f7; margin:0 0 40px 0; width:50%; height:auto;}
+img.alignleft{margin: 0 30px 10px 0; float: left;}
+a img.alignleft{margin: 0 30px 10px 0; float: left;}
+img.alignright{margin: 0 0px 10px 30px; float: right;}
+a img.alignright{margin: 0 0px 10px 30px; float: right;}
+.aligncenter, div.aligncenter {display: block;	margin-left: auto;margin-right: auto;}
+.alignleft {float: left;}
+.alignright {float: right;}
+.wp-caption {border: 1px solid #ddd;	margin: 10px;padding-top: 4px;text-align: center;}
+.wp-caption img {	border: 0 none;margin: 0;	padding: 0;}
+.wp-caption p.wp-caption-text {	font-size: 11px;line-height: 17px;margin: 0;	padding: 0 4px 5px;}
+.gallery { margin: auto;/* gallery clearing*/  width: 100%;}
+.gallery .gallery-item { float: left; margin-top: 10px;  text-align: center;}
+.gallery img { border:none;}
+.gallery-caption { margin-left: 0;}
+.gallery br { clear: both }
+/* available Columns */
+.col-2 { width: 50% }
+.col-3 { width: 33.333% }
+.col-4 { width: 25% }
+.col-5 { width: 20% }
+.col-6 { width: 16.666% }
+.col-7 { width: 14.285% }
+.col-8 { width: 12.5% }
+.col-9 { width: 11.111% }
+
+ /* Edit tool under every single post  */
+.edit{text-align: left; margin: 0 0 0px 0; }
+.edit ul{ list-style-type: none; margin: 5px auto 0px auto;  width:auto; padding-left: 0; height: 30px;}
+.edit li{ width: auto; display:inline; color:#000; padding: 0 5px 0 0px; font-size: 10px;  font-weight:normal; text-align: left;}
+.edit a{color: #000; }
+.edit a:link, .edit a:visited{color: #000;  }
+.edit li.com_left a{  float:none; display:none; }
+.time{ text-align: left; }
+
+/* Wrap Menu - When Wp-Navigation Menu is Enabled */
+#wrap_container{display:none; }
+
+ /* Header  */
+#header{width: auto; height: auto; }
+#header_container{width: 100%; margin: 0 auto; height: auto; padding: 0 0 0px 0;}
+#header img{border:none; padding: 0px; background:none; margin:0;}
+
+ /* Logo - Div inside Header  */
+#logo{width: auto; height: 60px; width: 300px; padding: 20px 0 0 0;}/*Standard size for logo image are 60x180px */
+#logo img{margin:0px;}
+#logo h1{font-size: 30px; line-height: 30px;  color: #000; font-weight: normal; letter-spacing: -1px; margin: 0px; padding:0px;   }/*Headings for replacing Title blog */
+#logo h2{font-size: 11px; line-height: 18px; height: 30px; color: #000;  font-weight: normal; letter-spacing: 0px; margin: 0 0;  }/*Headings for replacing Description blog */
+#logo a,#logo a:link,#logo a:active,#logo a:focus{color: #000; }
+
+/* Container   */
+#container{width: 100%; overflow:visible;}
+div.container{display:none;}
+/* Content - Main body   */
+#content{width: 100%; margin:20px 0 0 0;}/* corpo centrale */
+
+/* Author Info in the single post   */
+#author-info{ margin: 20px 0 0 0 ;}
+#author-image{float: left; padding:5px;}
+#author-info p {font-size: 11px;  margin:5px 0 0 0;}
+#author-info h5{font-size: 11px;  font-weight: bold;}
+#author-info a {color:#000;}
+/* Profile Avatar */
+.avatar{padding: 1px; margin: 0 10px 0 0; background: #fff; border: 1px solid #eee; float: left; width:auto; height:auto;}
+img.avatar{margin: 0 10px 5px 0; border: 1px solid #ccc; padding: 5px; float: left; clear: none; width:auto; height:auto;}
+
+/* Div for Facebook share and Retweet Button   */
+#post_social{display:none;}
+
+/* Sidebar  */
+#sidebar{display:none;}
+
+ /* Header - Adsense  */
+.headadvert_468x60 { display:none;}
+
+ /* Subfooter  */
+#subfooter{display:none }
+
+/* Comments  */
+ol.commentlist {display:none;}
+#respond{display:none;}
+
+/* Class for categories title */
+.fpost{display:none; }
+.fcategories{display:none;}
+
+/* Footer  */
+#footer{clear: both; text-align: left; padding:20px 0 0 0; }
+#footer_container{ height: 30px;}
+#footer a, #footer a:link, #footer a:focus, #footer a:active{font-weight:normal;}
+#footer p{color: #000;}
+#footer li{color: #000;}
+#footer ul.right{ display:none;}
+#footer ul{ height: 30px; }
+#footer li{display: inline; list-style-type: none; margin: 0; font-size: 10px; }

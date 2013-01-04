@@ -1,0 +1,14 @@
+{* Smarty *}
+
+<div id="mainpage">
+
+<div class="slider">
+  {include file='themes/cd/modules/homeslider/homeslider.tpl'}
+</div>
+
+<div class="pub_imgs">
+  <div class="bluebox"></div>
+  <div class="rejoin_blog"></div>
+</div>
+
+</div>

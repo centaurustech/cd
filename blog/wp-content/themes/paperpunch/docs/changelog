@@ -1,0 +1,5 @@
+== Changelog ==
+
+= 2.3 =
+* Replaced the old logo uploader with a faster version that uses WP core
+* Update Cufon to fix IE9 compatibility issues

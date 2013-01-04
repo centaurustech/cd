@@ -1,0 +1,6 @@
+2012-10-26 1:08:49 - webServiceRequest(doWebPayment) - Location : https://services.payline.com/V4/services/WebPaymentAPI
+2012-10-26 1:10:11 - webServiceRequest(getWebPaymentDetails) - Location : https://services.payline.com/V4/services/WebPaymentAPI
+2012-10-26 1:10:29 - webServiceRequest(getWebPaymentDetails) - Location : https://services.payline.com/V4/services/WebPaymentAPI
+2012-10-26 15:51:42 - webServiceRequest(doRefund) - Location : https://services.payline.com/V4/services/DirectPaymentAPI
+2012-10-26 15:51:42 - webServiceRequest(doRefund) - Location : https://services.payline.com/V4/services/DirectPaymentAPI
+2012-10-26 15:51:43 - webServiceRequest(doRefund) - Location : https://services.payline.com/V4/services/DirectPaymentAPI

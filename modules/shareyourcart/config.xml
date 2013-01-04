@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+	<name>shareyourcart</name>
+	<displayName><![CDATA[ShareYourCart]]></displayName>
+	<version><![CDATA[1.9.2]]></version>
+	<description><![CDATA[&lt;br /&gt;&lt;br /&gt;&lt;strong&gt;Increase by 10%&lt;/strong&gt; the number of Facebook shares and Twitter tweets that your customers do about your business.
+&lt;br /&gt;&lt;br /&gt;
+ShareYourCart enables owners to reward their customers for spreading the word about their products / services to their friends, by offering them a coupon code for their purchases, thus helping increase sales conversion
+&lt;br /&gt;&lt;br /&gt;
+You can choose how much of a discount to give (in fixed amount, percentage, or free shipping) and to which social media channels it should it be applied. You can also define what the advertisement should say, so that it fully benefits your sales.]]></description>
+	<author><![CDATA[Barandi Solutions]]></author>
+	<tab><![CDATA[social_networks]]></tab>
+	<is_configurable>1</is_configurable>
+	<need_instance>1</need_instance>
+	<limited_countries></limited_countries>
+</module>

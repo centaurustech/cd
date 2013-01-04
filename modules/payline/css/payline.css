@@ -1,0 +1,126 @@
+/* payline */
+div.cards {
+	border: 1px solid #d0d3d8;
+	background: #D0D1D5 repeat-x top left;
+	padding: 0.6em;
+	position: relative;
+	width: 544px
+}
+div.cards h3 { margin: 0 }
+div.cards p.checkbox input {
+	margin-top: 0!important;
+	margin-top: -3px
+}
+div.cards ul.item { clear: both }
+ul.card {
+	background-color: white;
+	float: left;
+	list-style-image: none;
+	list-style-position: outside;
+	list-style-type: none;
+	margin-left: 0.25em;
+	padding-bottom: 0.6em;
+	margin-bottom: 1em;
+	position: relative;
+	width: 268px
+}
+ul.card li {
+	padding-left: 1.4em;
+	margin-top: 0.6em
+}
+li.card_title {
+	margin-top: 0!important;
+	background-color: #d0d1d5;
+	color: #374853;
+	font-weight: bold;
+	height: 27px;
+	font-size: 1.2em;
+	line-height: 1.9em
+}
+ li.card_type b,
+ li.card_update a,
+ li.card_delete a { color: #dd2a81 }
+
+span.card_name,
+span.card_firstname,
+span.card_lastname,
+span.card_update a,
+span.card_delete a { color: #dd2a81 }
+span.card_name,
+span.card_firstname,
+span.card_lastname,
+span.card_company { font-weight: bold }
+
+p.submit {display:inline;}
+#createMyWallet {float:left;}
+#deleteMyWallet {float:right;}
+
+#createMyWallet,
+#deleteMyWallet {margin-top:10px;}
+#center_column .card_add { padding: 1em 0 }
+
+.paylineSpecificBlock
+{
+	display:block;
+	margin-left: 0.7em;
+	border: 1px solid #595A5E;
+}
+#recurringTitle{padding:0.6em;}
+#recurringCard{float:left;padding:0.6em;}
+.recurringLink{display:inline;border:none;text-decoration:none;}
+#recurringLogo{float:right;margin-right: 1.6em;margin-top:-3em;}
+
+div.cardsWallet {
+	border: 1px solid #d0d3d8;
+	background: #D0D1D5 repeat-x top left;
+	padding: 0.6em;
+	width: 517px;
+	margin-left:0.6em;
+	margin-bottom:0.6em;
+}
+
+div.cardsWallet ul.item { clear: both }
+ul.cardWallet {
+	background-color: white;
+	float: left;
+	list-style-image: none;
+	list-style-position: outside;
+	list-style-type: none;
+	margin-left: 0.25em;
+	padding-bottom: 0.6em;
+	margin-bottom: 1em;
+	position: relative;
+	width: 255px;
+}
+ul.cardWallet li {
+	padding-left: 1.4em;
+	margin-top: 0.6em;
+}
+
+div.paylineSpecificBlock img{margin-right: 1em;vertical-align: middle;padding-top:0.6em;padding-left:0.6em;}
+
+div.cardsWallet label{display:block;font-weight:bold;padding-top:10px;}
+div.cardsWallet input, div.cardsWallet select{margin:0;}
+#directPaymentPayline .invalid {
+	background-color:#f6b2b0;
+}
+
+.success{
+	background-color: #DFFAD3;
+	border: 1px solid #72CB67;
+	color: #383838;
+	font-weight: 700;
+	line-height: 20px;
+	margin: 0px 0px 10px;
+	padding: 10px 15px;
+}
+
+.error{
+	background-color: #FAE2E3;
+	border: 1px solid #EC9B9B;
+	color: #383838;
+	font-weight: 700;
+	line-height: 20px;
+	margin: 0px 0px 10px;
+	padding: 10px 15px;
+}

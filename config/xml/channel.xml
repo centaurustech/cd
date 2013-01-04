@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<prestashop>
+	<channel name="stable" available="1" >
+		<branch name="1.4" available="1" >
+			<name>1.4.9.0 final</name>
+			<num>1.4.9.0</num>
+			<download>
+				<link>http://www.prestashop.com/download/releases/prestashop_1.4.9.0.zip</link>
+				<md5>be760b2a13a530620de56d2cad5a850d</md5>
+			</download>
+			<changelog>http://www.prestashop.com/download/changelog_1.4.9.0.txt</changelog>
+		</branch>
+		<branch name="1.5" available="1" >
+			<name>1.5.3 stable</name>
+			<num>1.5.3.1</num>
+			<download>
+				<link>http://www.prestashop.com/download/releases/prestashop_1.5.3.1.zip</link>
+				<md5>c7490320cf300a0791da3d0a94637fc3</md5>
+			</download>
+			<changelog>http://www.prestashop.com/download/changelog_1.5.3.1.txt</changelog>
+		</branch>
+	</channel>
+	<channel name="rc" available="1" >
+		<branch name="1.5" available="1" >
+			<name>1.5.0.15 RC 2</name>
+			<num>1.5.0.15</num>
+			<download>
+				<link>http://www.prestashop.com/download/old/prestashop_1.5.0.15.zip</link>
+				<md5>ca69775d9ab9b4efaa29118887d9c539</md5>
+			</download>
+			<changelog>http://www.prestashop.com/download/old/changelog_1.5.0.15.txt</changelog>
+		</branch>
+	</channel>
+	<channel name="beta" available="1" >
+		<branch name="1.5" available="1" >
+			<name>1.5.0.9 beta</name>
+			<num>1.5.0.9</num>
+			<download>
+				<link>http://www.prestashop.com/download/prestashop_1.5.0.9.zip</link>
+				<md5>9b6b4ebd3745b9772cec320aa58da787</md5>
+			</download>
+			<changelog>http://www.prestashop.com/download/changelog_1.5.0.9.txt</changelog>
+		</branch>
+	</channel>
+	<channel name="alpha" >
+		<branch name="1.5" available="0" >
+			<name></name>
+			<num></num>
+			<download>
+				<link></link>
+				<md5></md5>
+			</download>
+			<changelog></changelog>
+		</branch>
+	</channel>
+	<channel name="private" available="1" >
+		<branch name="1.5" available="1">
+			<name>RC</name>
+			<num>1.5.0.13</num>
+			<download>
+				<link>http://www.prestashop.com/download/_PS_PRIVATE_KEY_/prestashop_1.5.0.13.zip</link>
+				<md5>65297f186556c6f2ba27102590fc8ae4</md5>
+			</download>
+			<changelog>http://www.prestashop.com/download/changelog_1.5.0.13.txt</changelog>
+		</branch>
+	</channel>
+	<autoupgrade>
+		<last_version>0.8.9</last_version>
+		<download>
+			<link>http://www.prestashop.com/download/autoupgrade.zip</link>
+			<md5>b44cbf87cb525d2e1ed578a0bf4fca05</md5>
+		</download>
+		<changelog></changelog>
+	</autoupgrade>
+</prestashop>
+
