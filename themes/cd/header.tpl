@@ -90,6 +90,19 @@
 					{$HOOK_LEFT_COLUMN}
 				</div>
 
+			<div id="menu_bar_container">
+			  {include file='./menu_bar.tpl'}
+			</div>
+
+			<div id="header_msgs">
+			  {if isset($msg) && $msg}
+			  <div class="vspace"></div>
+			  <p class="{if $nw_error}warning_inline{else}success_inline{/if}">{$msg}</p>
+			  <div class="vspace"></div>
+			  {/if}
+			</div>
+
+			<!-- <div id="body_container"> -->
 				<!-- Center -->
-				<div id="center_column" class=" grid_5">
+				<!-- <div id="center_column" class=" grid_5"> -->
 	{/if}

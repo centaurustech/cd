@@ -19,16 +19,18 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
+*  @version  Release: $Revision: 14008 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
-{capture name=path}<a href="{$link->getPageLink('my-account', true)}">{l s='My account'}</a><span class="navigation-pipe">{$navigationPipe}</span>{l s='My vouchers'}{/capture}
+
+{capture name=path}<a href="{$link->getPageLink('my-account.php', true)}">{l s='My account'}</a><span class="navigation-pipe">{$navigationPipe}</span>{l s='My Vouchers'}{/capture}
 {include file="$tpl_dir./breadcrumb.tpl"}
 
-<h1>{l s='My vouchers'}</h1>
+<h1>{l s='My Vouchers'}</h1>
 
-{if isset($cart_rules) && count($cart_rules) && $nb_cart_rules}
-<table class="discount std table_block">
+{if isset($discount) && count($discount) && $nbDiscounts}
+<table class="discount std">
 	<thead>
 		<tr>
 			<th class="discount_code first_item">{l s='Code'}</th>
@@ -41,34 +43,32 @@
 		</tr>
 	</thead>
 	<tbody>
-	{foreach from=$cart_rules item=discountDetail name=myLoop}
+	{foreach from=$discount item=discountDetail name=myLoop}
 		<tr class="{if $smarty.foreach.myLoop.first}first_item{elseif $smarty.foreach.myLoop.last}last_item{else}item{/if} {if $smarty.foreach.myLoop.index % 2}alternate_item{/if}">
-			<td class="discount_code">{$discountDetail.code}</td>
-			<td class="discount_description">{$discountDetail.name}</td>
+			<td class="discount_code">{$discountDetail.name}</td>
+			<td class="discount_description">{$discountDetail.description}</td>
 			<td class="discount_quantity">{$discountDetail.quantity_for_user}</td>
 			<td class="discount_value">
 				{if $discountDetail.id_discount_type == 1}
 					{$discountDetail.value|escape:'htmlall':'UTF-8'}%
 				{elseif $discountDetail.id_discount_type == 2}
 					{convertPrice price=$discountDetail.value}
-				{elseif $discountDetail.id_discount_type == 3}
-					{l s='Free shipping'}
 				{else}
-					-
+					{l s='Free shipping'}
 				{/if}
 			</td>
 			<td class="discount_minimum">
 				{if $discountDetail.minimal == 0}
-					{l s='None'}
+					{l s='none'}
 				{else}
 					{convertPrice price=$discountDetail.minimal}
 				{/if}
 			</td>
 			<td class="discount_cumulative">
 				{if $discountDetail.cumulable == 1}
-					<img src="{$img_dir}icon/yes.gif" alt="{l s='Yes'}" class="icon" /> {l s='Yes'}
+					<img src="{$img_dir}icon/yes.gif" alt="{l s='Yes'}" class="icon" />
 				{else}
-					<img src="{$img_dir}icon/no.gif" alt="{l s='No'}" class="icon" valign="middle" /> {l s='No'}
+					<img src="{$img_dir}icon/no.gif" alt="{l s='No'}" class="icon" />
 				{/if}
 			</td>
 			<td class="discount_expiration_date">{dateFormat date=$discountDetail.date_to}</td>
@@ -80,10 +80,10 @@
 	*{l s='Tax included'}
 </p>
 {else}
-	<p class="warning">{l s='You do not have any vouchers.'}</p>
+	<p class="warning">{l s='You do not possess any vouchers.'}</p>
 {/if}
 
 <ul class="footer_links">
-	<li><a href="{$link->getPageLink('my-account', true)}"><img src="{$img_dir}icon/my-account.gif" alt="" class="icon" /> {l s='Back to your account'}</a></li>
-	<li class="f_right"><a href="{$base_dir}"><img src="{$img_dir}icon/home.gif" alt="" class="icon" /> {l s='Home'}</a></li>
+	<li><a href="{$link->getPageLink('my-account.php', true)}"><img src="{$img_dir}icon/my-account.gif" alt="" class="icon" /></a><a href="{$link->getPageLink('my-account.php', true)}">{l s='Back to Your Account'}</a></li>
+	<li><a href="{$base_dir}"><img src="{$img_dir}icon/home.gif" alt="" class="icon" /></a><a href="{$base_dir}">{l s='Home'}</a></li>
 </ul>

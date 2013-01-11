@@ -25,6 +25,11 @@
 *}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7 lt-ie6 " lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8 ie7" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js lt-ie9 ie8" lang="en"> <![endif]-->
+<!--[if gt IE 8]> <html lang="fr" class="no-js ie9" lang="en"> <![endif]-->
+
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{$lang_iso}">
 	<head>
 		<title>{$meta_title|escape:'htmlall':'UTF-8'}</title>
@@ -35,12 +40,14 @@
 		<meta name="keywords" content="{$meta_keywords|escape:html:'UTF-8'}" />
 {/if}
 		<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+		<meta http-equiv="content-language" content="{$meta_language}" />
 		<meta name="generator" content="PrestaShop" />
 		<meta name="robots" content="{if isset($nobots)}no{/if}index,follow" />
 		<link rel="icon" type="image/vnd.microsoft.icon" href="{$img_ps_dir}favicon.ico?{$img_update_time}" />
 		<link rel="shortcut icon" type="image/x-icon" href="{$img_ps_dir}favicon.ico?{$img_update_time}" />
 		<script type="text/javascript">
 			var baseDir = '{$content_dir}';
+			var baseUri = '{$base_uri}';
 			var static_token = '{$static_token}';
 			var token = '{$token}';
 			var priceDisplayPrecision = {$priceDisplayPrecision*$currency->decimals};
@@ -84,17 +91,16 @@
 			</div>
 
 			<div id="menu_bar_container">
-			  {include file=$menubar_path}
+			  {include file='./menu_bar.tpl'}
 			</div>
 
 			<div id="header_msgs">
 			  {if isset($msg) && $msg}
-			  <div class="vspace"></div>			  
+			  <div class="vspace"></div>
 			  <p class="{if $nw_error}warning_inline{else}success_inline{/if}">{$msg}</p>
 			  <div class="vspace"></div>
 			  {/if}
 			</div>
-
 
 			<div id="body_container">
 

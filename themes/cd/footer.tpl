@@ -19,26 +19,38 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
+*  @version  Release: $Revision: 14008 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
+
+
 		{if !$content_only}
-				</div>
-
-<!-- Right -->
-				<div id="right_column" class="column grid_2 omega">
-					{$HOOK_RIGHT_COLUMN}
-				</div>
 			</div>
 
-<!-- Footer -->
-			<div id="footer" class="grid_9 alpha omega clearfix">
-				{$HOOK_FOOTER}
-				{if $PS_ALLOW_MOBILE_DEVICE}
-					<p class="center clearBoth"><a href="{$link->getPageLink('index', true)}?mobile_theme_ok">{l s='Browse the mobile site'}</a></p>
-				{/if}
-			</div>
+<div id="footer">
+  <div class="content">
+    <div class="firstline">
+      <a href="http://{ConfigurationCore::get('PS_SHOP_DOMAIN')}/content/8-faq-foire-aux-questions" class="btn payline"></a>
+      <a href="http://{ConfigurationCore::get('PS_SHOP_DOMAIN')}/contactez-nous" class="btn contactus"></a>
+      <a href="http://{ConfigurationCore::get('PS_SHOP_DOMAIN')}/content/8-faq-foire-aux-questions" class="btn twodays"></a>
+      <div class="infos">
+	<a href="http://{ConfigurationCore::get('PS_SHOP_DOMAIN')}/content/3-conditions-generales-de-ventes" class="link">Condition générales de vente</a>
+	<a href="http://{ConfigurationCore::get('PS_SHOP_DOMAIN')}/content/2-mentions-legales" class="link">Mentions légales</a>
+      </div>
+    </div>
+
+    <div class="secondline">
+      <a href="http://www.facebook.com/ClothesDiscount" class="btn facebook"></a>
+      <a href="https://twitter.com/ClothesClothes" class="btn twitter"></a>
+      {$HOOK_FOOTER}
+    </div>
+
+  </div>
+</div>
+
+			{*<div id="footer">{$HOOK_FOOTER}</div>*}
 		</div>
 	{/if}
 	</body>
