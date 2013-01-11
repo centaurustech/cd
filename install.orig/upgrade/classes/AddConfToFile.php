@@ -36,43 +36,42 @@ class	AddConfToFile
 		$this->file = $file;
 		$this->mode = $mode;
 		$this->checkFile($file);
-		if ($mode == 'w' AND !$this->error)
-			if (!$res = @fwrite($this->fd, '<?php'."\n"))
-				$this->error = 6;
+		$my_file = fopen( '/home/ks304579/public_html/cd/config/settings.inc.php', 'w+');
+		fwrite($my_file, '<?php'."\n");
+		fclose($my_file);
 	}
 	
 	public function __destruct()
 	{
 		if (!$this->error)
-			@fclose($this->fd);
+			fclose($this->fd);
 	}
 	
 	private function checkFile($file)
 	{
-		if (!$fd = @fopen($this->file, $this->mode))
+
+		if (!$fd = fopen($this->file, $this->mode))
 			$this->error = 5;
 		elseif (!is_writable($this->file))
-			$this->error = 6;
+			$this->error = "6/2";
 		$this->fd = $fd;
 	}
 	
 	public function writeInFile($name, $data)
 	{
-		if (!$res = @fwrite($this->fd,
-			'define(\''.$name.'\', \''.$this->checkString($data).'\');'."\n"))
-		{
-			$this->error = 6;
-			return false;
-		}
+		$my_file = fopen( '/home/ks304579/public_html/cd/config/settings.inc.php', 'w+');
+		fwrite($my_file, 
+		       'define(\''.$name.'\', \''.$this->checkString($data).'\');'."\n");
+		fclose($my_file);
 		return true;
 	}
 	
 	public function writeEndTagPhp()
 	{
-		if (!$res = @fwrite($this->fd, '?>'."\n")) {
-			$this->error = 6;
-			return false;
-		}
+		$my_file = fopen( '/home/ks304579/public_html/cd/config/settings.inc.php', 'w+');
+		fwrite($my_file, 
+		       '?>'."\n");
+		fclose($my_file);
 		return true;
 	}
 	
