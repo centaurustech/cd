@@ -3,4 +3,5 @@ themes/cd/cache/*
 cache/*
 *.orig
 **~
+config/settings.inc.php
 
