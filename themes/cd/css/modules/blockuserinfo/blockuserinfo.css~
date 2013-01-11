@@ -1,0 +1,48 @@
+/* block top user information */
+#header_user
+{
+  padding-top: 45px;
+  margin-left: 20px;
+}
+
+#header_right #header_user
+{
+    width: auto;
+    margin-right: 6px
+}
+
+#header_user {
+    width: auto;
+    font-family: Arialm sans-serif;
+    color: #000000;
+    font-size: 14px;
+}
+
+#header_user a, .header_user_infos_a {
+    text-decoration: none;
+    font-family: Arial, sans-serif;
+    color: #000000;
+    font-size: 14px;
+}
+
+#header_user a:hover, .header_user_infos_a:hover {
+    text-decoration: none;
+}
+
+#header_user p {
+}
+#header_user span { font-weight: bold }
+#header_user ul { margin-top: 0.3em }
+#header_user li {
+    line-height: 1em;
+    white-space: nowrap;
+    margin-left: 0;
+}
+#header_user #shopping_cart, #header_user #your_account { font-size: 0.9em }
+#header_user li#your_account { margin-left: 0 }
+#header_user #shopping_cart a, #header_user #your_account a {
+    background-repeat: no-repeat;
+    background-position: top left;
+    height: 20px;
+    text-decoration: none;
+}
