@@ -19,54 +19,33 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <!-- Block Newsletter module-->
-      <div class="newsletter">
-	<div class="texts">
-	  <div class="label">NEWSLETTER</div>
-	  <div class="desc">Vous désirez être tenu au courant des derniers produits, offres ?</div>
-	</div>
-
-	<div class="form">
-	  <form action="{$link->getPageLink('index.php')}" method="post">
-	    <div class="label">Adresse e-mail: </div>
-	    <div class="input"><input type="text" name="email" value="{if isset($value) && $value}{$value}{else}{l s='your e-mail' mod='blocknewsletter'}{/if}" onfocus="javascript:if(this.value=='{l s='your e-mail' mod='blocknewsletter'}')this.value='';" onblur="javascript:if(this.value=='')this.value='{l s='your e-mail' mod='blocknewsletter'}';" /></div>
-	    <input type="hidden" id="newsletter_action" name="action" value="{if isset($action)}{$action}{else}0{/if}" />
-	    <input type="submit" class="btn_validate" value="" name="submitNewsletter" />
-	    <input type="submit" onclick="document.getElementById('newsletter_action').value='1';" class="btn_unsubscribe" value="" name="submitNewsletter" />
-	  </form>
-	</div>
-      </div>
-
-      <div class="newsletter_msg">
-	{if isset($msg) && $msg}
-      	<p class="{if $nw_error}warning_inline{else}success_inline{/if}">{$msg}</p>
-	{/if}
-      </div>
-
-
-{*
 <div id="newsletter_block_left" class="block">
-	<h4>{l s='Newsletter' mod='blocknewsletter'}</h4>
+	<p class="title_block">{l s='Newsletter' mod='blocknewsletter'}</p>
 	<div class="block_content">
 	{if isset($msg) && $msg}
 		<p class="{if $nw_error}warning_inline{else}success_inline{/if}">{$msg}</p>
 	{/if}
-		<form action="{$link->getPageLink('index.php')}" method="post">
-			<p><input type="text" name="email" size="18" value="{if isset($value) && $value}{$value}{else}{l s='your e-mail' mod='blocknewsletter'}{/if}" onfocus="javascript:if(this.value=='{l s='your e-mail' mod='blocknewsletter'}')this.value='';" onblur="javascript:if(this.value=='')this.value='{l s='your e-mail' mod='blocknewsletter'}';" /></p>
+		<form action="{$link->getPageLink('index')}" method="post">
 			<p>
-				<select name="action">
+				{* @todo use jquery (focusin, focusout) instead of onblur and onfocus *}
+				<input type="text" name="email" size="18" 
+					value="{if isset($value) && $value}{$value}{else}{l s='your e-mail' mod='blocknewsletter'}{/if}" 
+					onfocus="javascript:if(this.value=='{l s='your e-mail' mod='blocknewsletter' js=1}')this.value='';" 
+					onblur="javascript:if(this.value=='')this.value='{l s='your e-mail' mod='blocknewsletter' js=1}';" 
+					class="inputNew" />
+				<!--<select name="action">
 					<option value="0"{if isset($action) && $action == 0} selected="selected"{/if}>{l s='Subscribe' mod='blocknewsletter'}</option>
 					<option value="1"{if isset($action) && $action == 1} selected="selected"{/if}>{l s='Unsubscribe' mod='blocknewsletter'}</option>
-				</select>
-				<input type="submit" value="ok" class="button_mini" name="submitNewsletter" />
+				</select>-->
+					<input type="submit" value="ok" class="button_mini" name="submitNewsletter" />
+				<input type="hidden" name="action" value="0" />
 			</p>
 		</form>
 	</div>
 </div>
-*}
 <!-- /Block Newsletter module-->

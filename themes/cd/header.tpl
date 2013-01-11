@@ -19,12 +19,15 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14008 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7 lt-ie6 " lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8 ie7" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js lt-ie9 ie8" lang="en"> <![endif]-->
+<!--[if gt IE 8]> <html lang="fr" class="no-js ie9" lang="en"> <![endif]-->
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{$lang_iso}">
 	<head>
 		<title>{$meta_title|escape:'htmlall':'UTF-8'}</title>
@@ -35,12 +38,14 @@
 		<meta name="keywords" content="{$meta_keywords|escape:html:'UTF-8'}" />
 {/if}
 		<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+		<meta http-equiv="content-language" content="{$meta_language}" />
 		<meta name="generator" content="PrestaShop" />
-		<meta name="robots" content="{if isset($nobots)}no{/if}index,follow" />
-		<link rel="icon" type="image/vnd.microsoft.icon" href="{$img_ps_dir}favicon.ico?{$img_update_time}" />
-		<link rel="shortcut icon" type="image/x-icon" href="{$img_ps_dir}favicon.ico?{$img_update_time}" />
+		<meta name="robots" content="{if isset($nobots)}no{/if}index,{if isset($nofollow) && $nofollow}no{/if}follow" />
+		<link rel="icon" type="image/vnd.microsoft.icon" href="{$favicon_url}?{$img_update_time}" />
+		<link rel="shortcut icon" type="image/x-icon" href="{$favicon_url}?{$img_update_time}" />
 		<script type="text/javascript">
 			var baseDir = '{$content_dir}';
+			var baseUri = '{$base_uri}';
 			var static_token = '{$static_token}';
 			var token = '{$token}';
 			var priceDisplayPrecision = {$priceDisplayPrecision*$currency->decimals};
@@ -58,44 +63,33 @@
 	{/foreach}
 {/if}
 		{$HOOK_HEADER}
-
 	</head>
 	
-	<body {if $page_name}id="{$page_name|escape:'htmlall':'UTF-8'}"{/if}>
+	<body {if isset($page_name)}id="{$page_name|escape:'htmlall':'UTF-8'}"{/if} class="{if $hide_left_column}hide-left-column{/if} {if $hide_right_column}hide-right-column{/if} {if $content_only} content_only {/if}">
 	{if !$content_only}
 		{if isset($restricted_country_mode) && $restricted_country_mode}
 		<div id="restricted-country">
 			<p>{l s='You cannot place a new order from your country.'} <span class="bold">{$geolocation_country}</span></p>
 		</div>
 		{/if}
-		<div id="page">
+		<div id="page" class="container_9 clearfix">
 
 			<!-- Header -->
-			<div id="header">
-				<a id="header_logo" href="{$link->getPageLink('index.php')}" title="{$shop_name|escape:'htmlall':'UTF-8'}">
-					<img class="logo" src="{$img_ps_dir}logo.jpg?{$img_update_time}" alt="{$shop_name|escape:'htmlall':'UTF-8'}" {if $logo_image_width}width="{$logo_image_width}"{/if} {if $logo_image_height}height="{$logo_image_height}" {/if} />
+			<div id="header" class="grid_9 alpha omega">
+				<a id="header_logo" href="{$base_dir}" title="{$shop_name|escape:'htmlall':'UTF-8'}">
+					<img class="logo" src="{$logo_url}" alt="{$shop_name|escape:'htmlall':'UTF-8'}" {if $logo_image_width}width="{$logo_image_width}"{/if} {if $logo_image_height}height="{$logo_image_height}" {/if} />
 				</a>
-				<div id="header_right">
-				  {*{$HOOK_TOP}*}
-				  {include file=$blockuserinfo_path}
-				  {include file=$blocklundisamedi_path}
-				  {include file=$blockbasket_path}
+				<div id="header_right" class="grid_6 omega">
+					{$HOOK_TOP}
 				</div>
 			</div>
 
-			<div id="menu_bar_container">
-			  {include file=$menubar_path}
-			</div>
+			<div id="columns" class="grid_9 alpha omega clearfix">
+				<!-- Left -->
+				<div id="left_column" class="column grid_2 alpha">
+					{$HOOK_LEFT_COLUMN}
+				</div>
 
-			<div id="header_msgs">
-			  {if isset($msg) && $msg}
-			  <div class="vspace"></div>			  
-			  <p class="{if $nw_error}warning_inline{else}success_inline{/if}">{$msg}</p>
-			  <div class="vspace"></div>
-			  {/if}
-			</div>
-
-
-			<div id="body_container">
-
+				<!-- Center -->
+				<div id="center_column" class=" grid_5">
 	{/if}
