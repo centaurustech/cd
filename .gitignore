@@ -14,3 +14,5 @@ adminclothes/autoupgrade/latest/prestashop/tools/smarty/cache/*
 adminclothes/autoupgrade/latest/prestashop/themes/prestashop/cache/*
 adminclothes/autoupgrade/latest/prestashop/modules/trustedshops/cache/*
 adminclothes/autoupgrade/latest/prestashop/modules/graphartichow/artichow/cache/*
+**.orig
+**~

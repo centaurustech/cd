@@ -19,24 +19,17 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
+*  @version  Release: $Revision: 14008 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-function submitPublishCMS(url, redirect, token)
+function submitPublishCMS(url, redirect)
 {
 	var id_cms = $('#admin-action-cms-id').val();
 
 	$.ajaxSetup({async: false});
-	$.post(url+'/index.php', { 
-			action: 'PublishCMS',
-			id_cms: id_cms, 
-			status: 1, 
-			redirect: redirect,
-			ajax: 1,
-			tab: 'AdminCmsContent',
-			token: token
-		},
+	$.post(url+'/ajax.php', { submitPublishCMS: '1', id_cms: id_cms, status: 1, redirect: redirect },
 		function(data)
 		{
 			if (data.indexOf('error') === -1)
