@@ -1,19 +1,6 @@
 tools/*
 themes/cd/cache/*
 cache/*
-tools/smarty_v2/cache/*
-tools/smarty/cache/*
-tools/smarty/compile/*
-themes/prestashop/cache/*
-themes/cd/cache/*
-modules/trustedshops/cache/*
-modules/graphartichow/artichow/cache/*
-adminclothes/autoupgrade/latest/prestashop/cache/*
-adminclothes/autoupgrade/latest/prestashop/tools/smarty_v2/cache/*
-adminclothes/autoupgrade/latest/prestashop/tools/smarty/cache/*
-adminclothes/autoupgrade/latest/prestashop/themes/prestashop/cache/*
-adminclothes/autoupgrade/latest/prestashop/modules/trustedshops/cache/*
-adminclothes/autoupgrade/latest/prestashop/modules/graphartichow/artichow/cache/*
 *.orig
 **~
 
