@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -195,9 +194,9 @@ class GraphGoogleChart extends ModuleGraphEngine
 			{
 				if ($i == 0 && !empty($this->_titles['main']))
 					$url .= '&chtt='.urlencode($this->_titles['main'][$i]);
-				elseif ($i == 1)
+				else if ($i == 1)
 					$url .= '&chdl=';
-				elseif ($i > 1)
+				else if ($i > 1)
 					$url .= '|';
 				if ($i != 0)
 					$url .= urlencode($this->_titles['main'][$i]);

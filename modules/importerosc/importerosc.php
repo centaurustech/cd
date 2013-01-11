@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 15821 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -32,8 +31,6 @@ class importerosc extends ImportModule
 {
 	public function __construct()
 	{
-		global $cookie;
-
 		$this->name = 'importerosc';
 		$this->tab = 'migration_tools';
 		$this->version = '1.0';
@@ -67,8 +64,8 @@ class importerosc extends ImportModule
 		if (!$this->checkCategoriesLevel())
 			$html .= $this->displayCategoriesLevelConf();
 
-		$langagues = $this->ExecuteS('SELECT * FROM  `'.bqSQL($this->prefix).'languages`');
-		$curencies = $this->ExecuteS('SELECT * FROM  `'.bqSQL($this->prefix).'currencies`');
+		$langagues = $this->executeS('SELECT * FROM  `'.bqSQL($this->prefix).'languages`');
+		$curencies = $this->executeS('SELECT * FROM  `'.bqSQL($this->prefix).'currencies`');
 
 		$html .= '<label style=\'width:220px\'>'.$this->l('Default osCommerce language  : ').'</label>
 				<div class="margin-form">
@@ -121,18 +118,18 @@ class importerosc extends ImportModule
 	public function getLangagues($limit = 0, $nrb_import = 100)
 	{
 		$identifier = 'id_lang';
-		$langagues = $this->ExecuteS('
+
+		$langagues = $this->executeS('
 			SELECT languages_id as id_lang, name as name, code as iso_code, 1 as active, (\'m/j/Y\') as date_format_lite, (\'m/j/Y H:i:s\') as date_format_full
 			FROM  `'.bqSQL($this->prefix).'languages`
-			LIMIT '.(int)($limit).' , '.(int)$nrb_import);
-
+			LIMIT '.(int)$limit.' , '.(int)$nrb_import);
 		return $this->autoFormat($langagues, $identifier);
 	}
 
 	public function getCurrencies($limit = 0, $nrb_import = 100)
 	{
 		$identifier = 'id_currency';
-		$currencies = $this->ExecuteS('
+		$currencies = $this->executeS('
 									SELECT currencies_id as id_currency, title as name, code as iso_code, 0 as format, 999 as iso_code_num, 1 as decimals,
 									CONCAT(`symbol_left`, `symbol_right`) as sign, value as conversion_rate
 									FROM  `'.bqSQL($this->prefix).'currencies` LIMIT '.(int)($limit).' , '.(int)$nrb_import
@@ -143,7 +140,7 @@ class importerosc extends ImportModule
 	public function getZones($limit = 0, $nrb_import = 100)
 	{
 		$identifier = 'id_zone';
-		$zones = $this->ExecuteS('SELECT geo_zone_id as id_zone, geo_zone_name as name, 1 as active FROM  `'.bqSQL($this->prefix).'geo_zones` LIMIT '.(int)($limit).' , '.(int)$nrb_import);
+		$zones = $this->executeS('SELECT geo_zone_id as id_zone, geo_zone_name as name, 1 as active FROM  `'.bqSQL($this->prefix).'geo_zones` LIMIT '.(int)($limit).' , '.(int)$nrb_import);
 		return $this->autoFormat($zones, $identifier);
 	}
 
@@ -153,7 +150,7 @@ class importerosc extends ImportModule
 		$keyLanguage = 'id_lang';
 		$identifier = 'id_country';
 		$defaultIdLang = $this->getDefaultIdLang();
-		$countries = $this->ExecuteS('
+		$countries = $this->executeS('
 										SELECT countries_id as id_country, countries_name as name, countries_iso_code_2 as iso_code, '.(int)$defaultIdLang.' as id_lang,
 										1 as id_zone, 0 as id_currency, 1 as contains_states, 1 as need_identification_number, 1 as active, 1 as display_tax_label
 										FROM  `'.bqSQL($this->prefix).'countries` as c  LIMIT '.(int)($limit).' , '.(int)$nrb_import);
@@ -192,7 +189,7 @@ class importerosc extends ImportModule
 	{
 		$genderMatch = array('m' => 1,'f' => 2);
 		$identifier = 'id_customer';
-		$customers = $this->ExecuteS('
+		$customers = $this->executeS('
 									SELECT c.`customers_id` as id_customer, 1 as id_default_group, c.`customers_gender` as id_gender, c.`customers_firstname` as firstname,
 									IFNULL( STRCMP(c.`customers_newsletter`, \'\') , 0 ) as newsletter, c.`customers_lastname` as lastname,
 									DATE(c.`customers_dob`) as birthday, c.`customers_email_address` as email, c.`customers_password` as passwd, 1 as active,
@@ -206,7 +203,7 @@ class importerosc extends ImportModule
 			if (isset($customer['id_gender']) && array_key_exists($customer['id_gender'], $genderMatch))
 			   $customer['id_gender'] = $genderMatch[$customer['id_gender']];
 			else
-			   $customer['id_gender'] = 9;
+			   $customer['id_gender'] = 0;
 
 		return $this->autoFormat($customers, $identifier);
 	}
@@ -214,7 +211,7 @@ class importerosc extends ImportModule
 	public function getAddresses($limit = 0, $nrb_import = 100)
 	{
 		$identifier = 'id_address';
-		$addresses = $this->ExecuteS('
+		$addresses = $this->executeS('
 									SELECT address_book_id as id_address, customers_id as id_customer, CONCAT(customers_id, \'_address\') as alias, entry_company as company, entry_firstname as firstname,
 									entry_lastname as lastname, entry_street_address as address1, entry_postcode as postcode, entry_city as city, entry_country_id as id_country, 0 as id_state
 									FROM  `'.bqSQL($this->prefix).'address_book` LIMIT '.(int)($limit).' , '.(int)$nrb_import);
@@ -226,12 +223,12 @@ class importerosc extends ImportModule
 		$multiLangFields = array('name', 'link_rewrite');
 		$keyLanguage = 'id_lang';
 		$identifier = 'id_category';
-		$categories = $this->ExecuteS('
+		$categories = $this->executeS('
 									SELECT c.categories_id as id_category, c.parent_id as id_parent, level as level_depth, cd.language_id as id_lang, cd.categories_name as name , 1 as active, categories_image as images
 									FROM `'.bqSQL($this->prefix).'categories` c
 									LEFT JOIN `'.bqSQL($this->prefix).'categories_description` cd ON (c.categories_id = cd.categories_id)
 									WHERE cd.categories_name IS NOT NULL AND cd.language_id IS NOT NULL
-									ORDER BY c.level ASC , c.`categories_id` 
+									ORDER BY c.level ASC , c.`categories_id`
 									LIMIT '.(int)($limit).' , '.(int)$nrb_import);
 		foreach($categories as& $cat)
 		{
@@ -247,7 +244,7 @@ class importerosc extends ImportModule
 		$multiLangFields = array('name', 'public_name');
 		$keyLanguage = 'id_lang';
 		$identifier = 'id_attribute_group';
-		$countries = $this->ExecuteS('
+		$countries = $this->executeS('
 									SELECT products_options_id as id_attribute_group, products_options_name as name , products_options_name as public_name, language_id as id_lang, 0 as is_color_group
 									FROM  `'.bqSQL($this->prefix).'products_options`
 									LIMIT '.(int)($limit).' , '.(int)$nrb_import);
@@ -259,7 +256,7 @@ class importerosc extends ImportModule
 		$multiLangFields = array('name');
 		$keyLanguage = 'id_lang';
 		$identifier = 'id_attribute';
-		$countries = $this->ExecuteS('
+		$countries = $this->executeS('
 									SELECT p.`products_options_values_id` as id_attribute, p.`products_options_values_name` as name, p.`language_id` as id_lang , po.`products_options_id` as id_attribute_group
 									FROM  `'.bqSQL($this->prefix).'products_options_values` p
 									LEFT JOIN `'.bqSQL($this->prefix).'products_options_values_to_products_options` po ON (po.products_options_values_id = p.products_options_values_id)
@@ -273,7 +270,7 @@ class importerosc extends ImportModule
 		$multiLangFields = array('name', 'link_rewrite', 'description');
 		$keyLanguage = 'id_lang';
 		$identifier = 'id_product';
-		$products = $this->ExecuteS('
+		$products = $this->executeS('
 									SELECT p.`products_id` as id_product, p.`products_quantity` as quantity, p.`products_model` as reference, p.`products_price` as price, p.`products_weight` as weight,
 									IFNULL(STRCMP(p.`products_status`, \'\') , 0 ) as active, p.`manufacturers_id` as id_manufacturer, pd.language_id as id_lang, pd.products_name as name,
 									pd.products_description as description, CONCAT(\''.pSQL(Tools::getProtocol()).pSQL(Tools::getValue('shop_url')).'\/images/\',p.`products_image`) as images,
@@ -285,7 +282,7 @@ class importerosc extends ImportModule
 									ORDER BY p.`products_id`
 									LIMIT '.(int)($limit).' , '.(int)$nrb_import);
 
-		$this->Execute('CREATE TABLE IF NOT EXISTS`products_images` (
+		$this->execute('CREATE TABLE IF NOT EXISTS`products_images` (
 						`id` int(11) NOT NULL AUTO_INCREMENT,
 						`products_id` int(11) NOT NULL,
 						`image` varchar(64) DEFAULT NULL,
@@ -296,7 +293,7 @@ class importerosc extends ImportModule
 						)');
 		foreach($products as& $product)
 		{
-			$result = $this->ExecuteS('SELECT `image` FROM `'.bqSQL($this->prefix).'products_images` WHERE products_id = '.(int)$product['id_product']);
+			$result = $this->executeS('SELECT `image` FROM `'.bqSQL($this->prefix).'products_images` WHERE products_id = '.(int)$product['id_product']);
 			$images = array();
 			foreach($result as $res)
 				$images[] = Tools::getProtocol().Tools::getValue('shop_url').'/images/'.$res['image'];
@@ -304,7 +301,7 @@ class importerosc extends ImportModule
 			$product['link_rewrite'] = Tools::link_rewrite($product['name']);
 
 
-			$result = $this->ExecuteS('SELECT `categories_id` FROM `'.bqSQL($this->prefix).'products_to_categories` WHERE products_id = '.(int)$product['id_product']);
+			$result = $this->executeS('SELECT `categories_id` FROM `'.bqSQL($this->prefix).'products_to_categories` WHERE products_id = '.(int)$product['id_product']);
 			$category_product = array('category_product' => array($product['id_category_default'] => $product['id_product']));
 			foreach($result as $res)
 				$category_product['category_product'][$res['categories_id']] = $product['id_product'];
@@ -316,7 +313,7 @@ class importerosc extends ImportModule
 	public function getProductsCombination($limit = 0, $nrb_import = 100)
 	{
 		$identifier = 'id_product_attribute';
-		$combinations = $this->ExecuteS('
+		$combinations = $this->executeS('
 										SELECT products_attributes_id as id_product_attribute, products_id as id_product, options_values_price as price, options_values_id
 										FROM  `'.bqSQL($this->prefix).'products_attributes` LIMIT '.(int)($limit).' , '.(int)$nrb_import);
 		foreach($combinations as& $combination)
@@ -330,7 +327,7 @@ class importerosc extends ImportModule
 	public function getManufacturers($limit = 0, $nrb_import = 100)
 	{
 		$identifier = 'id_manufacturer';
-		$manufacturers = $this->ExecuteS('
+		$manufacturers = $this->executeS('
 										SELECT manufacturers_id as id_manufacturer, manufacturers_name as name, 1 as active, manufacturers_image as images
 										FROM  `'.bqSQL($this->prefix).'manufacturers` LIMIT '.(int)($limit).' , '.(int)$nrb_import);
 		foreach($manufacturers as& $manufacturer)
@@ -344,7 +341,7 @@ class importerosc extends ImportModule
 		$multiLangFields = array('name');
 		$keyLanguage = 'id_lang';
 		$identifier = 'id_order_state';
-		$ordersStates = $this->ExecuteS('
+		$ordersStates = $this->executeS('
 									SELECT `orders_status_id` as id_order_state, `language_id` as id_lang, `orders_status_name` as name , 1 as hidden
 									FROM  `'.bqSQL($this->prefix).'orders_status`
 									LIMIT '.(int)($limit).' , '.(int)$nrb_import);//IF(`public_flag` = 0, 1, 0) as hidden
@@ -354,7 +351,7 @@ class importerosc extends ImportModule
 	public function getOrders($limit = 0, $nrb_import = 100)
 	{
 		$orders = array();
-		$addresses = $this->ExecuteS('SELECT customers_id as id_customer, address_book_id as id_address FROM  `'.bqSQL($this->prefix).'address_book` GROUP BY customers_id');
+		$addresses = $this->executeS('SELECT customers_id as id_customer, address_book_id as id_address FROM  `'.bqSQL($this->prefix).'address_book` GROUP BY customers_id');
 		$matchAddresses = array();
 		foreach($addresses as $address)
 			$matchAddresses[$address['id_customer']] = $address['id_address'];
@@ -367,7 +364,7 @@ class importerosc extends ImportModule
 			unset($psCurrency[$key]);
 		}
 
-		$orders = $this->ExecuteS('
+		$orders = $this->executeS('
 								SELECT orders_id as id_cart, '.$psCarrierDefault.' as id_carrier, 1 as id_lang, currency as id_currency, customers_id as id_customer, payment_method as payment, 1 as valid,
 								date_purchased as date_add, last_modified as date_upd
 								FROM  `'.bqSQL($this->prefix).'orders` LIMIT '.(int)($limit).' , '.(int)$nrb_import);
@@ -384,14 +381,14 @@ class importerosc extends ImportModule
 			$orders[$key]['total_shipping'] = $this->getValue('SELECT value FROM `'.bqSQL($this->prefix).'orders_total` WHERE `orders_id` = '.(int)$order['id_cart'].' AND class=\'ot_shipping\'');
 			$orders[$key]['total_discounts'] = 0;
 			$orders[$key]['total_wrapping'] = 0;
-			$orders[$key]['cart_products'] = $this->ExecuteS('
+			$orders[$key]['cart_products'] = $this->executeS('
 														SELECT `orders_id` as id_cart, `products_id` as id_product, 0 as id_product_attribute, `products_quantity` as quantity
 														FROM  `'.bqSQL($this->prefix).'orders_products` WHERE `orders_id` = '.(int)$order['id_cart']);
-			$orders[$key]['order_products'] = $this->ExecuteS('
+			$orders[$key]['order_products'] = $this->executeS('
 														SELECT `orders_id` as id_order, `products_id` as product_id, 0 as product_attribute_id, `products_name` as product_name, `products_quantity` as product_quantity,
 														`final_price` as product_price, 0 as product_weight
  														FROM  `'.bqSQL($this->prefix).'orders_products` WHERE `orders_id` = '.(int)$order['id_cart']);
-			$orders[$key]['order_history'] = $this->ExecuteS('
+			$orders[$key]['order_history'] = $this->executeS('
 														SELECT `orders_status_history_id` as id_order_history, 0 as id_employee, `orders_id` as id_order, `orders_status_id` as id_order_state, `date_added` as date_add
 														FROM  `'.bqSQL($this->prefix).'orders_status_history` WHERE `orders_id` = '.(int)$order['id_cart']);
 
@@ -427,10 +424,10 @@ class importerosc extends ImportModule
 	          WHERE `active` = 1 AND `email` = \''.pSQL($email).'\'');
 		if ($result && !empty($result['passwd_'.$this->name]))
 	    {
-			if ($this->checkPwd($passwd, $result['passwd_'.pSQL($this->name)]))
+			if($this->checkPwd($passwd, $result['passwd_'.pSQL($this->name)]))
 		 	{
 				$ps_passwd =  md5(pSQL(_COOKIE_KEY_.$passwd));
-				Db::getInstance()->Execute('
+				Db::getInstance()->execute('
 				UPDATE `'._DB_PREFIX_.'customer`
 				SET `passwd` = \''.pSQL($ps_passwd).'\', `passwd_'.bqSQL($this->name).'` = \'\'
 				WHERE `'._DB_PREFIX_.'customer`.`id_customer` ='.(int)$result['id_customer'].' LIMIT 1');
@@ -496,31 +493,31 @@ class importerosc extends ImportModule
 							<p>'.$this->l('(The prefix is optional. If all of your database tables start with "pref_", your prefix is "pref_")').'</p>
 						</div>';
 		return $content;
-	}
-	
+}
+
 	public function checkCategoriesLevel()
 	{
-		$columns = $this->ExecuteS('SHOW COLUMNS FROM `'.bqSQL($this->prefix).'categories` ');
+		$columns = $this->executeS('SHOW COLUMNS FROM `'.bqSQL($this->prefix).'categories` ');
 		foreach($columns as $field)
 			if ($field['Field'] ==  'level')
 				return true;
 		return false;
-	}
-	
+}
+
 	public function displayCategoriesLevelConf()
 	{
 		$html = '<div class="warn" id="warn_category_level" style="width:450px;display:none">
 					<img src="../img/admin/warn2.png">
-				'.$this->l('You are trying to import categories and we\'ve detected, that your oscommerce database doesn\'t have the field "level" in the table category. You must have this field to continue importing categories.');
-		
+				'.$this->l('You are trying to import categories and we\'ve detected, that your oscommerce database don\'t have the field "level" in the table categorie. You must have this field to continue the import of categories.');
+
 		$html .= '<button class="button" onclick="addAndCalculateLevel();" style="padding:10px;font-size:13px;text:align:center">'.$this->l('Click to add and calculate the filed "level" .').'</button> <span id="loading" style="display:none"><img src="../img/loader.gif"></span></div>
 				<div class="conf" id="conf_category_level" style="width:450px;display:none"><img src="../img/admin/ok2.png">'.$this->l('Level field\'s has been created and calculated, You can continue').'</div>';
-		
+
 		$html .= '
 			<script>
 			$(document).ready(function (){
-				
-				function checkCategorySelected() 
+
+				function checkCategorySelected()
 				{
 					if ($(\'#id_category_on:radio\').attr(\'checked\'))
 					{
@@ -534,15 +531,15 @@ class importerosc extends ImportModule
 						$(\'#checkAndSaveConfig\').removeAttr(\'disabled\');
 						$(\'#checkAndSaveConfig\').show();
 					}
-				
+
 				}
 				checkCategorySelected();
 				$(\'input[name="getCategories"]\').change( function () {
 					checkCategorySelected();
 				});
-				
+
 			});
-			
+
 			function addAndCalculateLevel()
 			{
 				if (confirm(\''.$this->l('It is highly recommended to backup your database before proceeding. Did you make a backup?').'\'))
@@ -565,69 +562,69 @@ class importerosc extends ImportModule
 	    						$(\'#checkAndSaveConfig\').removeAttr(\'disabled\');
 								$(\'#checkAndSaveConfig\').show();
 	    						$(\'#conf_category_level\').show();
-	    					}	
+	    					}
 				       },
-				      error: function (XMLHttpRequest, textStatus, errorThrown) 
+				      error: function (XMLHttpRequest, textStatus, errorThrown)
 				       {
-				       		
+
 				       }
 				   });
 			   }
 			   return false;
 			}
 			</script>';
-		
+
 		return $html;
 	}
-	
+
 	public function createLevelAndCalculate()
-	{		
+	{
 		if ($this->checkCategoriesLevel())
 			die('{"hasError" : false}');
-			
+
 		if ($this->createLevel())
 			$this->calculateLevel();
 		else
-			die('{"hasError" : true, "error" : "'.$this->l('Cannot ALTER TABLE').'"}');
+			die('{"hasError" : true, "error" : "'.$this->l('Can not ALTER TABLE').'"}');
 	}
 
 	public function createLevel()
 	{
-		return $this->Execute('ALTER TABLE `'.bqSQL($this->prefix).'categories` ADD `level` INT NOT NULL');
+		return $this->execute('ALTER TABLE `'.bqSQL($this->prefix).'categories` ADD `level` INT NOT NULL');
 	}
-	
+
 	public function calculateLevel()
 	{
 		$this->updateLevel($this->getSubCat(0), 1);
 		die('{"hasError" : false}');
 	}
-	
+
 	public function updateLevel($ids_cat, $level = 1)
 	{
-		$this->Execute('
-			UPDATE `'.bqSQL($this->prefix).'categories` 
-			SET level = '.(int)$level.' 
+		$this->execute('
+			UPDATE `'.bqSQL($this->prefix).'categories`
+			SET level = '.(int)$level.'
 			WHERE categories_id IN ('.implode(',', $ids_cat).')');
 		foreach($ids_cat as $id)
 			if ($sub_cat = $this->getSubCat($id))
 				$this->updateLevel($sub_cat, $level + 1);
-	
+
 	}
-	
+
 	public function getSubCat($id_parent)
 	{
-		$result = $this->ExecuteS('SELECT `categories_id` FROM `'.bqSQL($this->prefix).'categories` WHERE `parent_id`='.(int)$id_parent);		
+		$result = $this->executeS('SELECT `categories_id` FROM `'.bqSQL($this->prefix).'categories` WHERE `parent_id`='.(int)$id_parent);
 		if (!is_array($result) OR empty($result))
 			return false;
 		return $this->formatCategoriesIds($result);
 	}
-	
+
 	public function formatCategoriesIds($result)
 	{
 		$return = array();
 		foreach($result as $key => $val)
 			$return[] = $val['categories_id'];
-		return $return;		
+		return $return;
 	}
 }
 

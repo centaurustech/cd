@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14903 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -41,58 +40,38 @@ class GuestCore extends ObjectModel
 	public $real_player;
 	public $windows_media;
 	public $accept_language;
-	
- 	protected 	$fieldsSize = array('accept_language' => 8);
- 	protected 	$fieldsValidate = array(
-		'id_operating_system' => 'isUnsignedId',
-		'id_web_browser' => 'isUnsignedId',
-		'id_customer' => 'isUnsignedId',
-		'javascript' => 'isBool',
-		'screen_resolution_x' => 'isInt',
-		'screen_resolution_y' => 'isInt',
-		'screen_color' => 'isInt',
-		'sun_java' => 'isBool',
-		'adobe_flash' => 'isBool',
-		'adobe_director' => 'isBool',
-		'apple_quicktime' => 'isBool',
-		'real_player' => 'isBool',
-		'windows_media' => 'isBool',
-		'accept_language' => 'isGenericName'
+
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'guest',
+		'primary' => 'id_guest',
+		'fields' => array(
+			'id_operating_system' => 	array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId'),
+			'id_web_browser' => 		array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId'),
+			'id_customer' => 			array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId'),
+			'javascript' => 			array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'screen_resolution_x' => 	array('type' => self::TYPE_INT, 'validate' => 'isInt'),
+			'screen_resolution_y' => 	array('type' => self::TYPE_INT, 'validate' => 'isInt'),
+			'screen_color' => 			array('type' => self::TYPE_INT, 'validate' => 'isInt'),
+			'sun_java' => 				array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'adobe_flash' => 			array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'adobe_director' => 		array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'apple_quicktime' => 		array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'real_player' => 			array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'windows_media' => 			array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'accept_language' => 		array('type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'size' => 8),
+		),
 	);
 
-	protected 	$table = 'guest';
-	protected 	$identifier = 'id_guest';
-	
-	
 	protected	$webserviceParameters = array(
 		'fields' => array(
 			'id_customer' => array('xlink_resource' => 'customers'),
 		),
 	);
-	
-	public function getFields()
-	{
-		parent::validateFields();
-		
-		$fields['id_operating_system'] = (int)($this->id_operating_system);
-		$fields['id_web_browser'] = (int)($this->id_web_browser);
-		$fields['id_customer'] = (int)($this->id_customer);
-		$fields['javascript'] = (int)($this->javascript);
-		$fields['screen_resolution_x'] = (int)($this->screen_resolution_x);
-		$fields['screen_resolution_y'] = (int)($this->screen_resolution_y);
-		$fields['screen_color'] = (int)($this->screen_color);
-		$fields['sun_java'] = (int)($this->sun_java);
-		$fields['adobe_flash'] = (int)($this->adobe_flash);
-		$fields['adobe_director'] = (int)($this->adobe_director);
-		$fields['apple_quicktime'] = (int)($this->apple_quicktime);
-		$fields['real_player'] = (int)($this->real_player);
-		$fields['windows_media'] = (int)($this->windows_media);
-		$fields['accept_language'] = pSQL($this->accept_language);
-		
-		return $fields;
-	}
-	
-	function userAgent()
+
+	public function userAgent()
 	{
 		$userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
 		$acceptLanguage = isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : '';
@@ -116,20 +95,22 @@ class GuestCore extends ObjectModel
 		}
 		
 		// Only the first language is returned
-		return (sizeof($langsArray) ? key($langsArray) : '');
+		return (count($langsArray) ? key($langsArray) : '');
 	}
 
 	protected function getBrowser($userAgent)
 	{
 		$browserArray = array(
-			'Google Chrome' => 'Chrome/',
+			'Chrome' => 'Chrome/',
 			'Safari' => 'Safari',
-			'Firefox 3.x' => 'Firefox/3',
-			'Firefox 2.x' => 'Firefox/2',
+			'Safari iPad' => 'iPad',
+			'Firefox' => 'Firefox/',
 			'Opera' => 'Opera',
-			'IE 8.x' => 'MSIE 8',
-			'IE 7.x' => 'MSIE 7',
-			'IE 6.x' => 'MSIE 6'
+			'IE 10' => 'MSIE 10',
+			'IE 9' => 'MSIE 9',
+			'IE 8' => 'MSIE 8',
+			'IE 7' => 'MSIE 7',
+			'IE 6' => 'MSIE 6'
 		);
 		foreach ($browserArray as $k => $value)
 			if (strstr($userAgent, $value))
@@ -141,15 +122,18 @@ class GuestCore extends ObjectModel
 				
 				return $result['id_web_browser'];
 			}
-		return NULL;
+		return null;
 	}
 	
 	protected function getOs($userAgent)
 	{
 		$osArray = array(
-			'Windows Vista' => 'Windows NT 6',
+			'Windows 8' => 'Windows NT 6.2',
+			'Windows 7' => 'Windows NT 6.1',
+			'Windows Vista' => 'Windows NT 6.0',
 			'Windows XP' => 'Windows NT 5',
 			'MacOsX' => 'Mac OS X',
+			'Android' => 'Android',
 			'Linux' => 'X11'
 		);
 		foreach ($osArray as $k => $value)
@@ -162,7 +146,7 @@ class GuestCore extends ObjectModel
 				
 				return $result['id_operating_system'];
 			}
-		return NULL;
+		return null;
 	}
 	
 	public static function getFromCustomer($id_customer)
@@ -179,7 +163,7 @@ class GuestCore extends ObjectModel
 	public function mergeWithCustomer($id_guest, $id_customer)
 	{
 		// Since the guests are merged, the guest id in the connections table must be changed too
-		Db::getInstance()->Execute('
+		Db::getInstance()->execute('
 		UPDATE `'._DB_PREFIX_.'connections` c
 		SET c.`id_guest` = '.(int)($id_guest).'
 		WHERE c.`id_guest` = '.(int)($this->id));
@@ -197,12 +181,12 @@ class GuestCore extends ObjectModel
 	
 	public static function setNewGuest($cookie)
 	{
-		$guest = new Guest(isset($cookie->id_customer) ? Guest::getFromCustomer((int)$cookie->id_customer) : null);
+		$guest = new Guest(isset($cookie->id_customer) ? Guest::getFromCustomer((int)($cookie->id_customer)) : null);
 		$guest->userAgent();
-		if ($guest->id_operating_system OR $guest->id_web_browser)
+		if ($guest->id_operating_system || $guest->id_web_browser)
 		{
 			$guest->save();
-			$cookie->id_guest = (int)$guest->id;
+			$cookie->id_guest = (int)($guest->id);
 		}
 	}
 }

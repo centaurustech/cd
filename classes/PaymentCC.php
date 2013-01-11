@@ -20,12 +20,17 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14001 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-class PaymentCCCore extends ObjectModel
+/**
+ *
+ * @deprecated 1.5.0.1
+ * @see OrderPaymentCore
+ *
+ */
+class PaymentCCCore extends OrderPayment
 {
 	public $id_order;
 	public $id_currency;
@@ -43,32 +48,42 @@ class PaymentCCCore extends ObjectModel
 		'id_order' => 'isUnsignedId', 'id_currency' => 'isUnsignedId', 'amount' => 'isPrice',
 		'transaction_id' => 'isAnything', 'card_number' => 'isAnything', 'card_brand' => 'isAnything', 'card_expiration' => 'isAnything', 'card_holder' => 'isAnything');
 
-	protected 	$table = 'payment_cc';
-	protected 	$identifier = 'id_payment_cc';
+	public static $definition = array(
+		'table' => 'payment_cc',
+		'primary' => 'id_payment_cc',
+	);
 
+	/**
+	 * @deprecated 1.5.0.2
+	 * @see OrderPaymentCore
+	 */
 	public function getFields()
 	{
-		parent::validateFields();
-		$fields['id_order'] = (int)($this->id_order);
-		$fields['id_currency'] = (int)($this->id_currency);
-		$fields['amount'] = (float)($this->amount);
-		$fields['transaction_id'] = pSQL($this->transaction_id);
-		$fields['card_number'] = pSQL($this->card_number);
-		$fields['card_brand'] = pSQL($this->card_brand);
-		$fields['card_expiration'] = pSQL($this->card_expiration);
-		$fields['card_holder'] = pSQL($this->card_holder);
-		$fields['date_add'] = pSQL($this->date_add);
-		return $fields;
+		Tools::displayAsDeprecated();
+		return parent::getFields();
 	}
-	
+
+	/**
+	 * @deprecated 1.5.0.2
+	 * @see OrderPaymentCore
+	 */
 	public function add($autodate = true, $nullValues = false)
 	{
-		if (parent::add($autodate, $nullValues))
-		{
-			Module::hookExec('paymentCCAdded', array('paymentCC' => $this));
-			return true;
-		}
-		return false;
+		Tools::displayAsDeprecated();
+		return parent::add($autodate, $nullValues);
+	}
+
+	/**
+	* Get the detailed payment of an order
+	* @param int $id_order
+	* @return array
+	* @deprecated 1.5.0.1
+	* @see OrderPaymentCore
+	*/
+	public static function getByOrderId($id_order)
+	{
+		Tools::displayAsDeprecated();
+		$order = new Order($id_order);
+		return OrderPayment::getByOrderReference($order->reference);
 	}
 }
-

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 15821 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -86,7 +85,7 @@ class StatsGeoLocation extends Module
 
 		if ( !parent::install() OR !$this->registerHook('AdminStatsModules'))
 			return false;
-		if (!Db::getInstance()->Execute('
+		if (!Db::getInstance()->execute('
 		CREATE TABLE `'._DB_PREFIX_.'location_coords` (
 			`id_location_coords` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
 			`x` int(4) NOT NULL,
@@ -98,7 +97,7 @@ class StatsGeoLocation extends Module
 
 		$flag = 0;
 		$query = 'INSERT INTO `'._DB_PREFIX_.'location_coords` (`x`, `y`, `id_country`) VALUES ';
-		$result = Db::getInstance()->ExecuteS('SELECT `id_country`, `iso_code` FROM `'._DB_PREFIX_.'country`;');
+		$result = Db::getInstance()->executeS('SELECT `id_country`, `iso_code` FROM `'._DB_PREFIX_.'country`;');
 		foreach ($result as $index => $row)
 		{
 			if (isset($countries[$row['iso_code']]))
@@ -109,14 +108,14 @@ class StatsGeoLocation extends Module
 				$flag = 1;
 			}
 		}
-		return Db::getInstance()->Execute($query.';');
+		return Db::getInstance()->execute($query.';');
 	}
 	
 	function uninstall()
 	{
 		if (!parent::uninstall())
 			return false;
-		return (Db::getInstance()->Execute('DROP TABLE `'._DB_PREFIX_.'location_coords`'));
+		return (Db::getInstance()->execute('DROP TABLE `'._DB_PREFIX_.'location_coords`'));
 	}
 
 	function hookAdminStatsModules()
@@ -124,7 +123,7 @@ class StatsGeoLocation extends Module
 		$this->_html = '
 		<fieldset class="width3"><legend><img src="'.$this->_path.'logo.gif" alt="" title="" /> '.$this->displayName.'</legend>
 			<center>
-				<p><img src="../img/admin/down.gif" />'.$this->l('This module shows the distribution of your customers by country by displaying different sized points on the world map  below. See how popular your website is around the world and which continent/s you have yet to conquer.').'</p>
+				<p><img src="../img/admin/down.gif" />'.$this->l('This module shows the distribution of the countries of your customers by displaying different sized points on the worldmap below. See the fame of your website all around the world and which continent you have yet to conquer.').'</p>
 			</center>
 			<p class="space">
 				<img src="'.$this->_path.'drawer.php" alt="" title="" />
@@ -135,7 +134,7 @@ class StatsGeoLocation extends Module
 		<h2>'.$this->l('Open to the world').'</h2>
 			<p>
 				<ul>
-					<li class="bullet">'.$this->l('Add new languages to your shop if you see that a large number of your customers come from a foreign country.').'</li>
+					<li class="bullet">'.$this->l('Add new languages to your shop if you see that a sufficient part of your customers come from a foreign country.').'</li>
 				<li class="bullet">'.$this->l('Enlarge your shipping area to meet the potential demand.').'</li>
 				</ul>
 			</p>
@@ -151,11 +150,9 @@ class StatsGeoLocation extends Module
 
 	public function displayForm()
 	{
-		global $cookie;
-
 		$map_size;
 		$cross_size;
-		$id_lang = (isset($cookie->id_lang) ? (int)($cookie->id_lang) : Configuration::get('PS_LANG_DEFAULT'));
+		$id_lang = (int)$this->context->language->id;
 		$wait = $this->l('Please wait...');
 
 		if ((file_exists('../modules/'.$this->name.'/'.$this->_map_path) == FALSE) || 

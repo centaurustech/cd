@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14001 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,27 +29,25 @@ class DateRangeCore extends ObjectModel
 	public $time_start;
 	public $time_end;
 
-	protected	$fieldsRequired = array ('time_start', 'time_end');	
-	protected	$fieldsValidate = array ('time_start' => 'isDate', 'time_end' => 'isDate');
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'date_range',
+		'primary' => 'id_date_range',
+		'fields' => array(
+			'time_start' => array('type' => self::TYPE_DATE, 'validate' => 'isDate', 'required' => true),
+			'time_end' => 	array('type' => self::TYPE_DATE, 'validate' => 'isDate', 'required' => true),
+		),
+	);
 
-	protected 	$table = 'date_range';
-	protected 	$identifier = 'id_date_range';
-	
-	public function getFields()
-	{
-		parent::validateFields();
-		$fields['time_start'] = pSQL($this->time_start);
-		$fields['time_end'] = pSQL($this->time_end);
-		return $fields;
-	}
-	
 	public static function getCurrentRange()
 	{
 		$result = Db::getInstance()->getRow('
 		SELECT `id_date_range`, `time_end`
 		FROM `'._DB_PREFIX_.'date_range`
 		WHERE `time_end` = (SELECT MAX(`time_end`) FROM `'._DB_PREFIX_.'date_range`)');
-		if (!$result['id_date_range'] OR strtotime($result['time_end']) < strtotime(date('Y-m-d H:i:s')))
+		if (!$result['id_date_range'] || strtotime($result['time_end']) < strtotime(date('Y-m-d H:i:s')))
 		{
 			// The default range is set to 1 day less 1 second (in seconds)
 			$rangeSize = 86399;

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16461 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -39,49 +38,50 @@ class BlockWishList extends Module
 	{
 		$this->name = 'blockwishlist';
 		$this->tab = 'front_office_features';
-		$this->version = 0.3;
+		$this->version = 0.2;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
-
+		
 		parent::__construct();
-
+		
 		$this->displayName = $this->l('Wishlist block');
 		$this->description = $this->l('Adds a block containing the customer\'s wishlists.');
 		$this->default_wishlist_name = $this->l('My wishlist');
 	}
-
+	
 	public function install()
 	{
 		if (!file_exists(dirname(__FILE__).'/'.self::INSTALL_SQL_FILE))
 			return (false);
-		elseif (!$sql = file_get_contents(dirname(__FILE__).'/'.self::INSTALL_SQL_FILE))
+		else if (!$sql = file_get_contents(dirname(__FILE__).'/'.self::INSTALL_SQL_FILE))
 			return (false);
 		$sql = str_replace(array('PREFIX_', 'ENGINE_TYPE'), array(_DB_PREFIX_, _MYSQL_ENGINE_), $sql);
 		$sql = preg_split("/;\s*[\r\n]+/", $sql);
 		foreach ($sql AS $query)
-			if ($query)
-				if (!Db::getInstance()->Execute(trim($query)))
+			if($query)
+				if(!Db::getInstance()->execute(trim($query)))
 					return false;
-		if (!parent::install() ||
-			!$this->registerHook('rightColumn') ||
-			!$this->registerHook('productActions') ||
-			!$this->registerHook('cart') ||
-			!$this->registerHook('customerAccount') ||
-			!$this->registerHook('header') ||
-			!$this->registerHook('adminCustomers') ||
-			!$this->registerHook('authentication'))
+		if (!parent::install() OR
+						!$this->registerHook('rightColumn') OR
+						!$this->registerHook('productActions') OR
+						!$this->registerHook('cart') OR
+						!$this->registerHook('customerAccount') OR
+						!$this->registerHook('header') OR
+						!$this->registerHook('adminCustomers')
+					)
 			return false;
 		/* This hook is optional */
-		$this->registerHook('myAccountBlock');
+		$this->registerHook('displayMyAccountBlock');
 		return true;
 	}
-
+	
 	public function uninstall()
 	{
-		return (Db::getInstance()->Execute('DROP TABLE '._DB_PREFIX_.'wishlist') &&
-			Db::getInstance()->Execute('DROP TABLE '._DB_PREFIX_.'wishlist_email') &&
-			Db::getInstance()->Execute('DROP TABLE '._DB_PREFIX_.'wishlist_product') &&
-			Db::getInstance()->Execute('DROP TABLE '._DB_PREFIX_.'wishlist_product_cart') &&
+		return (
+			Db::getInstance()->execute('DROP TABLE '._DB_PREFIX_.'wishlist') AND
+			Db::getInstance()->execute('DROP TABLE '._DB_PREFIX_.'wishlist_email') AND
+			Db::getInstance()->execute('DROP TABLE '._DB_PREFIX_.'wishlist_product') AND
+			Db::getInstance()->execute('DROP TABLE '._DB_PREFIX_.'wishlist_product_cart') AND 
 			parent::uninstall()
 		);
 	}
@@ -94,7 +94,7 @@ class BlockWishList extends Module
 			$activated = Tools::getValue('activated');
 			if ($activated != 0 AND $activated != 1)
 				$this->_html .= '<div class="alert error">'.$this->l('Activate module : Invalid choice.').'</div>';
-			$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.$this->l('Settings updated').'</div>';
+			$this->_html .= '<div class="conf confirm">'.$this->l('Settings updated').'</div>';
 		}
 		$this->_displayForm();
 		return ($this->_html);
@@ -104,11 +104,9 @@ class BlockWishList extends Module
 	{
 		$this->_displayFormView();
 	}
-
+	
 	private function _displayFormView()
 	{
-		global $cookie;
-
 		$customers = Customer::getCustomers();
 		if (!sizeof($customers))
 			return;
@@ -167,54 +165,46 @@ class BlockWishList extends Module
 		$this->_html .= 	'</fieldset>
 		</form>';
 	}
-
-	public function hookAuthentication()
-	{
-		global $cookie;
-
-		if (isset($cookie->id_wishlist))
-		{
-			unset($cookie->id_wishlist);
-			$cookie->write();
-		}
-	}
-
+	
 	public function hookHeader($params)
 	{
-		Tools::addCSS(($this->_path).'blockwishlist.css', 'all');
-		return $this->display(__FILE__, 'blockwishlist-header.tpl');
+		$this->context->controller->addCSS(($this->_path).'blockwishlist.css', 'all');
+		$this->context->controller->addJS(($this->_path).'js/ajax-wishlist.js');
 	}
 
 	public function hookRightColumn($params)
 	{
-		global $smarty, $errors;
+		global $errors;
 
 		require_once(dirname(__FILE__).'/WishList.php');
-		if ($params['cookie']->isLogged())
+		if ($this->context->customer->isLogged())
 		{
-			$wishlists = Wishlist::getByIdCustomer($params['cookie']->id_customer);
-			if (empty($params['cookie']->id_wishlist) === true ||
-				WishList::exists($params['cookie']->id_wishlist, $params['cookie']->id_customer) === false)
+			$wishlists = Wishlist::getByIdCustomer($this->context->customer->id);
+			if (empty($this->context->cookie->id_wishlist) === true ||
+				WishList::exists($this->context->cookie->id_wishlist, $this->context->customer->id) === false)
 			{
 				if (!sizeof($wishlists))
 					$id_wishlist = false;
 				else
 				{
 					$id_wishlist = (int)($wishlists[0]['id_wishlist']);
-					$params['cookie']->id_wishlist = (int)($id_wishlist);
+					$this->context->cookie->id_wishlist = (int)($id_wishlist);
 				}
 			}
 			else
-				$id_wishlist = $params['cookie']->id_wishlist;
-			$smarty->assign(array(
+				$id_wishlist = $this->context->cookie->id_wishlist;
+			$this->smarty->assign(array(
 				'id_wishlist' => $id_wishlist,
 				'isLogged' => true,
-				'wishlist_products' => ($id_wishlist == false ? false : WishList::getProductByIdCustomer($id_wishlist, $params['cookie']->id_customer, $params['cookie']->id_lang, null, true)),
+				'wishlist_products' => ($id_wishlist == false ? false : WishList::getProductByIdCustomer($id_wishlist, $this->context->customer->id, $this->context->language->id, null, true)),
 				'wishlists' => $wishlists,
 				'ptoken' => Tools::getToken(false)));
 		}
 		else
-			$smarty->assign(array('wishlist_products' => false, 'wishlists' => false));
+			$this->smarty->assign(array('wishlist_products' => false, 'wishlists' => false));
+		
+		$this->smarty->assign(array('wishlist_link' => $this->context->link->getModuleLink('blockwishlist', 'mywishlist')));
+		
 		return ($this->display(__FILE__, 'blockwishlist.tpl'));
 	}
 
@@ -225,38 +215,34 @@ class BlockWishList extends Module
 
 	public function hookProductActions($params)
 	{
-		global $smarty;
-
-		$smarty->assign('id_product', (int)(Tools::getValue('id_product')));
+		$this->smarty->assign('id_product', (int)(Tools::getValue('id_product')));
 		return ($this->display(__FILE__, 'blockwishlist-extra.tpl'));
 	}
-
+	
 	public function hookCustomerAccount($params)
 	{
-		global $smarty;
 		return $this->display(__FILE__, 'my-account.tpl');
 	}
 
-	public function hookMyAccountBlock($params)
+	public function hookDisplayMyAccountBlock($params)
 	{
 		return $this->hookCustomerAccount($params);
 	}
-
+	
 	private function _displayProducts($id_wishlist)
 	{
-		global $cookie, $link;
 		include_once(dirname(__FILE__).'/WishList.php');
-
-		$wishlist = new WishList((int)($id_wishlist));
-		$products = WishList::getProductByIdCustomer((int)($id_wishlist), (int)($wishlist->id_customer), (int)($cookie->id_lang));
+		
+		$wishlist = new WishList($id_wishlist);
+		$products = WishList::getProductByIdCustomer($id_wishlist, $wishlist->id_customer, $this->context->language->id);
 		for ($i = 0; $i < sizeof($products); ++$i)
 		{
-			$obj = new Product((int)($products[$i]['id_product']), false, (int)($cookie->id_lang));
+			$obj = new Product((int)($products[$i]['id_product']), false, $this->context->language->id);
 			if (!Validate::isLoadedObject($obj))
 				continue;
 			else
 			{
-				$images = $obj->getImages((int)($cookie->id_lang));
+				$images = $obj->getImages($this->context->language->id);
 				foreach ($images AS $k => $image)
 				{
 					if ($image['cover'])
@@ -266,7 +252,7 @@ class BlockWishList extends Module
 					}
 				}
 				if (!isset($products[$i]['cover']))
-					$products[$i]['cover'] = Language::getIsoById((int)($cookie->id_lang)).'-default';
+					$products[$i]['cover'] = $this->context->language->iso_code.'-default';
 			}
 		}
 		$this->_html .= '
@@ -285,7 +271,7 @@ class BlockWishList extends Module
 				$this->_html .= '
 				<tr>
 					<td class="first_item">
-						<img src="'.$link->getImageLink($product['link_rewrite'], $product['cover'], 'small').'" alt="'.htmlentities($product['name'], ENT_COMPAT, 'UTF-8').'" style="float:left;" />
+						<img src="'.$this->context->link->getImageLink($product['link_rewrite'], $product['cover'], 'small').'" alt="'.htmlentities($product['name'], ENT_COMPAT, 'UTF-8').'" style="float:left;" />
 						'.$product['name'];
 				if (isset($product['attributes_small']))
 					$this->_html .= '<br /><i>'.htmlentities($product['attributes_small'], ENT_COMPAT, 'UTF-8').'</i>';
@@ -297,28 +283,28 @@ class BlockWishList extends Module
 			}
 		$this->_html .= '</tbody></table>';
 	}
-
+	
 	public function hookAdminCustomers($params)
 	{
 		require_once(dirname(__FILE__).'/WishList.php');
-
+		
 		$customer = new Customer((int)($params['id_customer']));
 		if (!Validate::isLoadedObject($customer))
 			die (Tools::displayError());
 
 		$this->_html = '<h2>'.$this->l('Wishlists').'</h2>';
-
+		
 		$wishlists = WishList::getByIdCustomer((int)($customer->id));
 		if (!sizeof($wishlists))
 			$this->_html .= $customer->lastname.' '.$customer->firstname.' '.$this->l('No wishlist.');
 		else
 		{
 			$this->_html .= '<form action="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'" method="post" id="listing">';
-
+	
 			$id_wishlist = (int)(Tools::getValue('id_wishlist'));
 			if (!$id_wishlist)
 					$id_wishlist = $wishlists[0]['id_wishlist'];
-
+			
 			$this->_html .= '<span>'.$this->l('Wishlist').': </span> <select name="id_wishlist" onchange="$(\'#listing\').submit();">';
 			foreach ($wishlists as $wishlist)
 			{
@@ -329,13 +315,13 @@ class BlockWishList extends Module
 					$counter = $wishlist['counter'];
 				}
 				$this->_html .= '>'.htmlentities($wishlist['name'], ENT_COMPAT, 'UTF-8').'</option>';
-			}
+			}		
 			$this->_html .= '</select>';
-
+			
 			$this->_displayProducts((int)($id_wishlist));
-
+						
 			$this->_html .= '</form><br />';
-
+			
 			return $this->_html;
 		}
 	}

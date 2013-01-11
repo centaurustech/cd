@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -75,8 +74,8 @@ class GraphXmlSwfCharts extends ModuleGraphEngine
 	
 	public static function hookGraphEngine($params, $drawer)
 	{
-		return '<script language="javascript">AC_FL_RunContent = 0;</script>
-			<script language="javascript"> DetectFlashVer = 0; </script>
+		return '<script language="javascript" type="text/javascript">AC_FL_RunContent = 0;</script>
+			<script language="javascript" type="text/javascript"> DetectFlashVer = 0; </script>
 			<script src="../modules/graphxmlswfcharts/xml_swf_charts/AC_RunActiveContent.js" language="javascript"></script>
 			<script language="JavaScript" type="text/javascript">
 			<!--
@@ -92,7 +91,7 @@ class GraphXmlSwfCharts extends ModuleGraphEngine
 				alert("This page requires AC_RunActiveContent.js.");
 			} else {
 				var hasRightVersion = DetectFlashVer(requiredMajorVersion, requiredMinorVersion, requiredRevision);
-				if (hasRightVersion) {
+				if(hasRightVersion) {
 					AC_FL_RunContent(
 					\'codebase\', \'http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,45,0\',
 					\'width\', \''.$params['width'].'\',

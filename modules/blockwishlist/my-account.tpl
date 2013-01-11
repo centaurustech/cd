@@ -19,13 +19,14 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <!-- MODULE WishList -->
-<li>
-<a href="{$base_dir_ssl}modules/blockwishlist/mywishlist.php" title="{l s='My wishlists' mod='blockwishlist'}"><img src="{$module_template_dir}logo.gif" alt="{l s='wishlist' mod='blockwishlist'}" class="icon" /></a><a href="{$base_dir_ssl}modules/blockwishlist/mywishlist.php" title="{l s='My wishlists' mod='blockwishlist'}">{l s='My wishlists' mod='blockwishlist'}</a>
+<li class="lnk_wishlist">
+	<a href="{$wishlist_link}" title="{l s='My wishlists' mod='blockwishlist'}">
+		<img {if isset($mobile_hook)} src="{$module_template_dir}img/gift.png" class="ui-li-icon ui-li-thumb" {else} src="{$module_template_dir}img/gift.gif" class="icon"{/if}  alt="{l s='wishlist' mod='blockwishlist'}" /> {l s='My wishlists' mod='blockwishlist'}
+	</a>
 </li>
 <!-- END : MODULE WishList -->

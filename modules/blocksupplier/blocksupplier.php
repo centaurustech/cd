@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16460 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -46,17 +45,25 @@ class BlockSupplier extends Module
 
 	function install()
 	{
-		return (parent::install() && $this->registerHook('leftColumn') && $this->registerHook('header') && 
-		Configuration::updateValue('SUPPLIER_DISPLAY_TEXT', true) && Configuration::updateValue('SUPPLIER_DISPLAY_TEXT_NB', 5) &&
-		Configuration::updateValue('SUPPLIER_DISPLAY_FORM', true));
+		if (!parent::install())
+			return false;
+		if (!$this->registerHook('displayLeftColumn'))
+			return false;
+		if (!$this->registerHook('displayHeader'))
+			return false;
+		Configuration::updateValue('SUPPLIER_DISPLAY_TEXT', true);
+		Configuration::updateValue('SUPPLIER_DISPLAY_TEXT_NB', 5);
+		Configuration::updateValue('SUPPLIER_DISPLAY_FORM', true);
+		return true;
 	}
 
-	function hookLeftColumn($params)
+	function hookDisplayLeftColumn($params)
 	{
-		global $smarty, $link;
-		$smarty->assign(array(
-			'suppliers' => Supplier::getSuppliers(false),
-			'link' => $link,
+		$id_lang = (int)Context::getContext()->language->id;
+
+		$this->smarty->assign(array(
+			'suppliers' => Supplier::getSuppliers(false, $id_lang),
+			'link' => $this->context->link,
 			'text_list' => Configuration::get('SUPPLIER_DISPLAY_TEXT'),
 			'text_list_nb' => Configuration::get('SUPPLIER_DISPLAY_TEXT_NB'),
 			'form_list' => Configuration::get('SUPPLIER_DISPLAY_FORM'),
@@ -90,7 +97,7 @@ class BlockSupplier extends Module
 		}
 		return $output.$this->displayForm();
 	}
-	
+
 	public function displayForm()
 	{
 		$output = '
@@ -102,7 +109,7 @@ class BlockSupplier extends Module
 					<label class="t" for="text_list_on"> <img src="../img/admin/enabled.gif" alt="'.$this->l('Enabled').'" title="'.$this->l('Enabled').'" /></label>
 					<input type="radio" name="text_list" id="text_list_off" value="0" '.(!Tools::getValue('text_list', Configuration::get('SUPPLIER_DISPLAY_TEXT')) ? 'checked="checked" ' : '').'/>
 					<label class="t" for="text_list_off"> <img src="../img/admin/disabled.gif" alt="'.$this->l('Disabled').'" title="'.$this->l('Disabled').'" /></label>
-					&nbsp;&nbsp;&nbsp;'.$this->l('Display').' <input type="text" size="2" name="text_nb" value="'.Tools::getValue('text_nb', Configuration::get('SUPPLIER_DISPLAY_TEXT_NB')).'" /> '.$this->l('elements').'
+					&nbsp;&nbsp;&nbsp;'.$this->l('Display').' <input type="text" size="2" name="text_nb" value="'.(int)Tools::getValue('text_nb', Configuration::get('SUPPLIER_DISPLAY_TEXT_NB')).'" /> '.$this->l('elements').'
 					<p class="clear">'.$this->l('To display suppliers as a plain-text list').'</p>
 				</div>
 				<label>'.$this->l('Use a drop-down list').'</label>
@@ -118,14 +125,15 @@ class BlockSupplier extends Module
 		</form>';
 		return $output;
 	}
-	
-	function hookRightColumn($params)
+
+	function hookDisplayRightColumn($params)
 	{
-		return $this->hookLeftColumn($params);
+		return $this->hookDisplayLeftColumn($params);
 	}
-	
-	function hookHeader($params)
+
+	function hookDisplayHeader($params)
 	{
-		Tools::addCSS(($this->_path).'blocksupplier.css', 'all');
+		$this->context->controller->addCSS(($this->_path).'blocksupplier.css', 'all');
 	}
 }
+

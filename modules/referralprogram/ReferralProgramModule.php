@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16462 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -35,31 +34,29 @@ class ReferralProgramModule extends ObjectModel
 	public $lastname;
 	public $firstname;
 	public $id_customer;
-	public $id_discount;
-	public $id_discount_sponsor;
+	public $id_cart_rule;
+	public $id_cart_rule_sponsor;
 	public $date_add;
 	public $date_upd;
 
-	protected $fieldsRequired = array('id_sponsor', 'email', 'lastname', 'firstname');
-	protected $fieldsSize = array('id_sponsor' => 8, 'email' => 255, 'lastname' => 128, 'firstname' => 128, 'id_customer' => 8, 'id_discount' => 8, 'id_discount_sponsor' => 8);
-	protected $fieldsValidate = array( 'id_sponsor' => 'isUnsignedId', 'email' => 'isEmail', 'lastname' => 'isName', 'firstname' => 'isName', 'id_customer' => 'isUnsignedId', 'id_discount' => 'isUnsignedId', 'id_discount_sponsor' => 'isUnsignedId');
-	protected $table = 'referralprogram';
-	protected $identifier = 'id_referralprogram';
-
-	public function getFields()
-	{
-		parent::validateFields();
-		$fields['id_sponsor'] = (int)$this->id_sponsor;
-		$fields['email'] = pSQL($this->email);
-		$fields['lastname'] = pSQL($this->lastname);
-		$fields['firstname'] = pSQL($this->firstname);
-		$fields['id_customer'] = (int)$this->id_customer;
-		$fields['id_discount'] = (int)$this->id_discount;
-		$fields['id_discount_sponsor'] = (int)$this->id_discount_sponsor;
-		$fields['date_add'] = pSQL($this->date_add);
-		$fields['date_upd'] = pSQL($this->date_upd);
-		return $fields;
-	}
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'referralprogram',
+		'primary' => 'id_referralprogram',
+		'fields' => array(
+			'id_sponsor' =>			array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'email' =>				array('type' => self::TYPE_STRING, 'validate' => 'isEmail', 'required' => true, 'size' => 255),
+			'lastname' =>			array('type' => self::TYPE_STRING, 'validate' => 'isName', 'required' => true, 'size' => 128),
+			'firstname' =>			array('type' => self::TYPE_STRING, 'validate' => 'isName', 'required' => true, 'size' => 128),
+			'id_customer' =>		array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId'),
+			'id_cart_rule' =>		array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId'),
+			'id_cart_rule_sponsor' =>array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId'),
+			'date_add' =>			array('type' => self::TYPE_DATE, 'validate' => 'isDate'),
+			'date_upd' =>			array('type' => self::TYPE_DATE, 'validate' => 'isDate'),
+		),
+	);
 
 	public static function getDiscountPrefix()
 	{
@@ -68,14 +65,14 @@ class ReferralProgramModule extends ObjectModel
 
 	public function registerDiscountForSponsor($id_currency)
 	{
-		if ((int)$this->id_discount_sponsor > 0)
+		if ((int)$this->id_cart_rule_sponsor > 0)
 			return false;
 		return $this->registerDiscount((int)$this->id_sponsor, 'sponsor', (int)$id_currency);
 	}
 
 	public function registerDiscountForSponsored($id_currency)
 	{
-		if (!(int)$this->id_customer OR (int)$this->id_discount > 0)
+		if (!(int)$this->id_customer OR (int)$this->id_cart_rule > 0)
 			return false;
 		return $this->registerDiscount((int)$this->id_customer, 'sponsored', (int)$id_currency);
 	}
@@ -84,36 +81,29 @@ class ReferralProgramModule extends ObjectModel
 	{
 		$configurations = Configuration::getMultiple(array('REFERRAL_DISCOUNT_TYPE', 'REFERRAL_PERCENTAGE', 'REFERRAL_DISCOUNT_VALUE_'.(int)$id_currency));
 
-		$discount = new Discount();
-		$discount->id_discount_type = (int)$configurations['REFERRAL_DISCOUNT_TYPE'];
+		$cartRule = new CartRule();		
+		if ($configurations['REFERRAL_DISCOUNT_TYPE'] == Discount::PERCENT)
+			$cartRule->reduction_percent = (float)$configurations['REFERRAL_PERCENTAGE'];
+		elseif ($configurations['REFERRAL_DISCOUNT_TYPE'] == Discount::AMOUNT AND isset($configurations['REFERRAL_DISCOUNT_VALUE_'.(int)$id_currency]))
+			$cartRule->reduction_amount = (float)$configurations['REFERRAL_DISCOUNT_VALUE_'.(int)$id_currency];
 		
-		/* % */
-		if ($configurations['REFERRAL_DISCOUNT_TYPE'] == 1)
-			$discount->value = (float)$configurations['REFERRAL_PERCENTAGE'];
-		/* Fixed amount */
-		elseif ($configurations['REFERRAL_DISCOUNT_TYPE'] == 2 AND isset($configurations['REFERRAL_DISCOUNT_VALUE_'.(int)($id_currency)]))
-			$discount->value = (float)$configurations['REFERRAL_DISCOUNT_VALUE_'.(int)($id_currency)];
-		/* Unknown or value undefined for this currency (configure your module correctly) */
-		else
-			$discount->value = 0;
-		
-		$discount->quantity = 1;
-		$discount->quantity_per_user = 1;
-		$discount->date_from = date('Y-m-d H:i:s', time());
-		$discount->date_to = date('Y-m-d H:i:s', time() + 31536000); // + 1 year
-		$discount->name = $this->getDiscountPrefix().Tools::passwdGen(6);
-		$discount->description = Configuration::getInt('REFERRAL_DISCOUNT_DESCRIPTION');
-		$discount->id_customer = (int)$id_customer;
-		$discount->id_currency = (int)$id_currency;
+		$cartRule->quantity = 1;
+		$cartRule->quantity_per_user = 1;
+		$cartRule->date_from = date('Y-m-d H:i:s', time());
+		$cartRule->date_to = date('Y-m-d H:i:s', time() + 31536000); // + 1 year
+		$cartRule->code = $this->getDiscountPrefix().Tools::passwdGen(6);
+		$cartRule->name = Configuration::getInt('REFERRAL_DISCOUNT_DESCRIPTION');
+		$cartRule->id_customer = (int)$id_customer;
+		$cartRule->id_currency = (int)$id_currency;
 
-		if ($discount->add())
+		if ($cartRule->add())
 		{
 			if ($register != false)
 			{
 				if ($register == 'sponsor')
-					$this->id_discount_sponsor = (int)$discount->id;
+					$this->id_cart_rule_sponsor = (int)$cartRule->id;
 				elseif ($register == 'sponsored')
-					$this->id_discount = (int)$discount->id;
+					$this->id_cart_rule = (int)$cartRule->id;
 				return $this->save();
 			}
 			return true;
@@ -143,7 +133,7 @@ class ReferralProgramModule extends ObjectModel
 				$query.= ' AND s.`id_customer` != 0';
 		}
 
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS($query);
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($query);
 	}
 
 	/**
@@ -172,7 +162,7 @@ class ReferralProgramModule extends ObjectModel
 		$result = Db::getInstance()->getRow('
 		SELECT s.`id_referralprogram`
 		FROM `'._DB_PREFIX_.'referralprogram` s
-		WHERE s.`id_sponsor` = '.(int)$id_sponsor.' AND s.`id_referralprogram` = '.(int)$id_friend);
+		WHERE s.`id_sponsor` = '.(int)($id_sponsor).' AND s.`id_referralprogram` = '.(int)($id_friend));
 
 		return isset($result['id_referralprogram']);
 	}
@@ -184,16 +174,17 @@ class ReferralProgramModule extends ObjectModel
 	  */
 	public static function isEmailExists($email, $getId = false, $checkCustomer = true)
 	{
-		if (empty($email) || !Validate::isEmail($email))
-			die(Tools::displayError('Email invalid.'));
-		if ($checkCustomer && Customer::customerExists($email, false, true))
-			return false;
+		if (empty($email) OR !Validate::isEmail($email))
+			die (Tools::displayError('E-mail invalid.'));
 
+		if ($checkCustomer === true AND Customer::customerExists($email))
+			return false;
 		$result = Db::getInstance()->getRow('
 		SELECT s.`id_referralprogram`
 		FROM `'._DB_PREFIX_.'referralprogram` s
 		WHERE s.`email` = \''.pSQL($email).'\'');
-
-		return $getId ? (int)$result['id_referralprogram'] : isset($result['id_referralprogram']);
+		if ($getId)
+			return (int)$result['id_referralprogram'];
+		return isset($result['id_referralprogram']);
 	}
 }

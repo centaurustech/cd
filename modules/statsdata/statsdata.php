@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 15821 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,19 +29,19 @@ if (!defined('_PS_VERSION_'))
 
 class StatsData extends Module
 {
-	public function __construct()
-	{
-		$this->name = 'statsdata';
-		$this->tab = 'analytics_stats';
-		$this->version = 1.0;
+    public function __construct()
+    {
+        $this->name = 'statsdata';
+        $this->tab = 'analytics_stats';
+        $this->version = 1.0;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
-		parent::__construct();
-
-		$this->displayName = $this->l('Data mining for statistics');
-		$this->description = $this->l('This module must be enabled if you want to use Statistics.');
-	}
+        parent::__construct();
+		
+        $this->displayName = $this->l('Data mining for statistics');
+        $this->description = $this->l('This module must be enabled if you want to use Statistics.');
+    }
 
 	public function install()
 	{
@@ -67,7 +66,7 @@ class StatsData extends Module
 				<label class="t" for="PS_STATSDATA_CUSTOMER_PAGESVIEWS_on"> <img src="../img/admin/enabled.gif" alt="'.$this->l('Yes').'" title="'.$this->l('Yes').'" /></label>
 				<input type="radio" name="PS_STATSDATA_CUSTOMER_PAGESVIEWS" id="PS_STATSDATA_CUSTOMER_PAGESVIEWS_off" value="0" '.(Tools::getValue('PS_STATSDATA_CUSTOMER_PAGESVIEWS', Configuration::get('PS_STATSDATA_CUSTOMER_PAGESVIEWS')) ? '' : 'checked="checked"').' />
 				<label class="t" for="PS_STATSDATA_CUSTOMER_PAGESVIEWS_off"> <img src="../img/admin/disabled.gif" alt="'.$this->l('No').'" title="'.$this->l('No').'" /></label>
-				<p>'.$this->l('Customer page views use extensive CPU resources and database space.').'</p>
+				<p>'.$this->l('Customer page views uses a lot of CPU resources and database space.').'</p>
 			</div>
 			<div class="clear">&nbsp;</div>
 			<label>'.$this->l('Save global page views').'</label>
@@ -124,7 +123,7 @@ class StatsData extends Module
 							navinfo.type = "navinfo";
 							navinfo.id_guest = "'.(int)$params['cookie']->id_guest.'";
 							navinfo.token = "'.$token.'";
-							$.post("'._PS_BASE_URL_.__PS_BASE_URI__.'statistics.php", navinfo);
+							$.post("'.Context::getContext()->link->getPageLink('statistics', (bool)(Tools::getShopProtocol() == 'https://')).'", navinfo);
 						}
 					);
 				</script>';
@@ -159,7 +158,7 @@ class StatsData extends Module
 						pagetime.time_start = "'.$tokenArray['time_start'].'";
 						pagetime.token = "'.$token.'";
 						pagetime.time = time_end-time_start;
-						$.post("'._PS_BASE_URL_.__PS_BASE_URI__.'statistics.php", pagetime);
+						$.post("'.Context::getContext()->link->getPageLink('statistics', (bool)(Tools::getShopProtocol() == 'https://')).'", pagetime);
 					}
 				);
 			</script>';

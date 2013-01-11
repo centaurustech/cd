@@ -1,4 +1,9 @@
-	tinyMCE.init({
+function tinySetup(config)
+{
+	if(!config)
+		config = {};
+
+	default_config = {
 		mode : "specific_textareas",
 		theme : "advanced",
 		skin:"cirkuit",
@@ -13,8 +18,8 @@
 		theme_advanced_toolbar_location : "top",
 		theme_advanced_toolbar_align : "left",
 		theme_advanced_statusbar_location : "bottom",
-		theme_advanced_resizing : false,
-        content_css : pathCSS+"global.css",
+		theme_advanced_resizing : true,
+		content_css : pathCSS+"global.css",
 		document_base_url : ad,
 		width: "600",
 		height: "auto",
@@ -23,9 +28,17 @@
 		file_browser_callback : "ajaxfilemanager",
 		entity_encoding: "raw",
 		convert_urls : false,
-        language : iso
-		
+		language : iso
+	}
+
+	$.each(default_config, function(index, el)
+	{
+		if (config[index] === undefined )
+			config[index] = el;
 	});
+	tinyMCE.init(config);
+};
+
 
 	function ajaxfilemanager(field_name, url, type, win) {
 		var ajaxfilemanagerurl = ad+"/ajaxfilemanager/ajaxfilemanager.php";

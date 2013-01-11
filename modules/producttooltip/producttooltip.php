@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 15821 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -41,24 +40,24 @@ class ProductToolTip extends Module
 		parent::__construct();
 
 		$this->displayName = $this->l('Product tooltips');
-		$this->description = $this->l('Show how many people are watching a product page, last sale and last cart added.');		
+		$this->description = $this->l('Show how many people are watching a product page, last sale and last cart added.');
 	}
-	
+
 	public function install()
 	{
-		if (!parent::install())
-			return false;
-			
+	 	if (!parent::install())
+	 		return false;
+
 		/* Default configuration values */
 		Configuration::updateValue('PS_PTOOLTIP_PEOPLE', 1);
 		Configuration::updateValue('PS_PTOOLTIP_DATE_CART', 1);
 		Configuration::updateValue('PS_PTOOLTIP_DATE_ORDER', 1);
 		Configuration::updateValue('PS_PTOOLTIP_DAYS', 3);
 		Configuration::updateValue('PS_PTOOLTIP_LIFETIME', 30);
-				
+
 	 	return $this->registerHook('header') AND $this->registerHook('productfooter');
 	}
-	
+
 	public function uninstall()
 	{
 		if (!Configuration::deleteByName('PS_PTOOLTIP_PEOPLE')
@@ -70,7 +69,7 @@ class ProductToolTip extends Module
 			return false;
 		return true;
 	}
-	
+
 	public function getContent()
 	{
 		/* Update values in DB */
@@ -81,7 +80,7 @@ class ProductToolTip extends Module
 			Configuration::updateValue('PS_PTOOLTIP_DATE_ORDER', (int)(Tools::getValue('ps_ptooltip_date_order')));
 			Configuration::updateValue('PS_PTOOLTIP_DAYS', ((int)(Tools::getValue('ps_ptooltip_days') < 0 ? 0 : (int)Tools::getValue('ps_ptooltip_days'))));
 			Configuration::updateValue('PS_PTOOLTIP_LIFETIME', ((int)(Tools::getValue('ps_ptooltip_lifetime') < 0 ? 0 : (int)Tools::getValue('ps_ptooltip_lifetime'))));
-			
+
 			echo $this->displayConfirmation($this->l('Settings updated'));
 		}
 
@@ -92,7 +91,7 @@ class ProductToolTip extends Module
 			<legend><img src="'.__PS_BASE_URI__.'modules/producttooltip/logo.gif" alt="" />'.$this->l('Product tooltips').'</legend>
 			<p>
 				'.$this->l('Display the number of people who are currently watching this product?').'<br /><br />
-				<img src="'._PS_ADMIN_IMG_.'enabled.gif" alt="" /><input type="radio" name="ps_ptooltip_people" value="1"'.(Configuration::get('PS_PTOOLTIP_PEOPLE') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('Yes').' 
+				<img src="'._PS_ADMIN_IMG_.'enabled.gif" alt="" /><input type="radio" name="ps_ptooltip_people" value="1"'.(Configuration::get('PS_PTOOLTIP_PEOPLE') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('Yes').'
 				&nbsp;<img src="'._PS_ADMIN_IMG_.'disabled.gif" alt="" /><input type="radio" name="ps_ptooltip_people" value="0"'.(!Configuration::get('PS_PTOOLTIP_PEOPLE') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('No').'<br />
 			</p>
 			<p>
@@ -100,19 +99,19 @@ class ProductToolTip extends Module
 				<input type="text" name="ps_ptooltip_lifetime" style="width: 30px;" value="'.(int)(Configuration::get('PS_PTOOLTIP_LIFETIME')).'" /> '.$this->l('minutes').'<br />
 			</p>
 			<p>
-				'.$this->l('If you activate the option above, you must activate the first option from StatData module').'
+				'.$this->l('If you activate the option above, you must activate the first option of StatData module').'
 			</p>
-			<hr size="1" noshade />			
+			<hr size="1" noshade />
 			<p>
-				'.$this->l('Display the last order date?').'<br /><br />
-				<img src="'._PS_ADMIN_IMG_.'enabled.gif" alt="" /><input type="radio" name="ps_ptooltip_date_order" value="1"'.(Configuration::get('PS_PTOOLTIP_DATE_ORDER') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('Yes').' 
+				'.$this->l('Display the last time the product has been ordered?').'<br /><br />
+				<img src="'._PS_ADMIN_IMG_.'enabled.gif" alt="" /><input type="radio" name="ps_ptooltip_date_order" value="1"'.(Configuration::get('PS_PTOOLTIP_DATE_ORDER') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('Yes').'
 				&nbsp;<img src="'._PS_ADMIN_IMG_.'disabled.gif" alt="" /><input type="radio" name="ps_ptooltip_date_order" value="0"'.(!Configuration::get('PS_PTOOLTIP_DATE_ORDER') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('No').'<br /><br />
 			</p>
 			<p>
 				'.$this->l('If not ordered yet, display the last time the product has been added to a cart?').'<br /><br />
-				<img src="'._PS_ADMIN_IMG_.'enabled.gif" alt="" /><input type="radio" name="ps_ptooltip_date_cart" value="1"'.(Configuration::get('PS_PTOOLTIP_DATE_CART') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('Yes').' 
+				<img src="'._PS_ADMIN_IMG_.'enabled.gif" alt="" /><input type="radio" name="ps_ptooltip_date_cart" value="1"'.(Configuration::get('PS_PTOOLTIP_DATE_CART') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('Yes').'
 				&nbsp;<img src="'._PS_ADMIN_IMG_.'disabled.gif" alt="" /><input type="radio" name="ps_ptooltip_date_cart" value="0"'.(!Configuration::get('PS_PTOOLTIP_DATE_CART') ? ' checked="checked"' : '').' style="vertical-align: middle;" /> '.$this->l('No').'<br /><br />
-				
+
 			</p>
 			<p>
 				'.$this->l('Do not display events older than:').'
@@ -127,27 +126,24 @@ class ProductToolTip extends Module
 		</p>
 		<div style="clear: both; font-size: 0;"></div>
 		</form>';
-		
+
 		return $output;
 	}
-	
+
 	public function hookHeader($params)
 	{
-		Tools::addCSS(__PS_BASE_URI__.'css/jquery.jgrowl.css', 'all');
-		Tools::addJS(__PS_BASE_URI__.'js/jquery/jquery.jgrowl-1.2.1.min.js');
+		$this->context->controller->addJQueryPlugin('jgrowl');
 	}
-	
+
 	public function hookProductFooter($params)
 	{
-		global $smarty, $cookie;
-		
 		$id_product = (int)($params['product']->id);
-		
+
 		/* First we try to display the number of people who are currently watching this product page */
 		if (Configuration::get('PS_PTOOLTIP_PEOPLE'))
 		{
 			$date = strftime('%Y-%m-%d %H:%M:%S' , time() - (int)(Configuration::get('PS_PTOOLTIP_LIFETIME') * 60));
-			
+
 			$nbPeople = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
 			SELECT COUNT(DISTINCT(id_connections)) nb
 			FROM '._DB_PREFIX_.'page p
@@ -155,24 +151,24 @@ class ProductToolTip extends Module
 			WHERE p.id_page_type = 1 AND p.id_object = '.(int)($id_product).' AND cp.time_start > \''.pSQL($date).'\'');
 
 			if (isset($nbPeople['nb']) AND $nbPeople['nb'] > 0)
-				$smarty->assign('nb_people', (int)($nbPeople['nb']));
+				$this->smarty->assign('nb_people', (int)($nbPeople['nb']));
 		}
-		
+
 		/* Then, we try to display last sale */
 		if (Configuration::get('PS_PTOOLTIP_DATE_ORDER'))
 		{
 			$days = (int)(Configuration::get('PS_PTOOLTIP_DAYS'));
 			$date = strftime('%Y-%m-%d' , strtotime('-'.(int)($days).' day'));
-			
+
 			$order = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
 			SELECT o.date_add
 			FROM '._DB_PREFIX_.'order_detail od
 			LEFT JOIN '._DB_PREFIX_.'orders o ON (od.id_order = o.id_order)
 			WHERE od.product_id = '.(int)($id_product).' AND o.date_add >= \''.pSQL($date).'\'
 			ORDER BY o.date_add DESC');
-			
+
 			if (isset($order['date_add']) && Validate::isDateFormat($order['date_add'])  && $order['date_add'] != '0000-00-00 00:00:00')
-				$smarty->assign('date_last_order', $order['date_add']);
+				$this->smarty->assign('date_last_order', $order['date_add']);
 			else
 			{
 				/* No sale? display last cart add instead */
@@ -182,9 +178,9 @@ class ProductToolTip extends Module
 					SELECT cp.date_add
 					FROM '._DB_PREFIX_.'cart_product cp
 					WHERE cp.id_product = '.(int)($id_product));
-			
+
 					if (isset($cart['date_add']) && Validate::isDateFormat($cart['date_add'])  && $cart['date_add'] != '0000-00-00 00:00:00')
-						$smarty->assign('date_last_cart', $cart['date_add']);
+						$this->smarty->assign('date_last_cart', $cart['date_add']);
 				}
 			}
 		}

@@ -18,37 +18,9 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 6594 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
-
-<script type="text/javascript">
-	var error_message = "<p>{$error_message}</p>";
-	{literal}
-		$(document).ready(function(){
-			if ($().live) {
-				$("#account-creation_form").live("submit", function(){
-					if($("#customer_privacy").length > 0 && !$("#customer_privacy").is(":checked")) {
-						$("div.error_customerprivacy").empty().append(error_message);
-						return false;
-					} else {
-						$("div.error_customerprivacy").empty();
-					}
-				});
-			} else {
-				$("#account-creation_form").submit(function(){
-					if($("#customer_privacy").length > 0 && !$("#customer_privacy").is(":checked")) {
-						$("div.error_customerprivacy").empty().append(error_message);
-						return false;
-					} else {
-						$("div.error_customerprivacy").empty();
-					}
-				});
-			}
-		});
-	{/literal}
-</script>
 
 <div class="error_customerprivacy" style="color:red;"></div>
 <fieldset class="account_creation customerprivacy">
@@ -56,5 +28,5 @@
 	<p class="required">
 		<input type="checkbox" value="1" id="customer_privacy" name="customer_privacy" style="float:left;margin: 15px;" />				
 	</p>
-	<label for="customer_privacy" style="float:left;width:80%;text-align:left;cursor:pointer">{$privacy_message}</label>		
+	<label for="customer_privacy">{$privacy_message}</label>		
 </fieldset>

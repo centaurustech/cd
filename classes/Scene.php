@@ -20,98 +20,110 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16480 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class SceneCore extends ObjectModel
 {
- 	/** @var mixed Name */
-	public 		$name;
-	
-	/** @var boolean Active Scene */
-	public 		$active = true;
-	
-	/** @var array Zone for image map */
-	public		$zones = array();
-	
-	/** @var array list of category where this scene is available */
-	public		$categories = array();
-	
-	/** @var array Products */
-	public 		$products;
-		
-	protected 	$table = 'scene';
-	protected 	$identifier = 'id_scene';
+ 	/** @var string Name */
+	public $name;
 
- 	protected 	$fieldsRequired = array('active');
- 	protected 	$fieldsValidate = array('active' => 'isBool', 'zones' => 'isSceneZones', 'categories' => 'isArrayWithIds');
- 	protected 	$fieldsRequiredLang = array('name');
- 	protected 	$fieldsSizeLang = array('name' => 100);
- 	protected 	$fieldsValidateLang = array('name' => 'isGenericName');
- 	
- 	public function __construct($id = NULL, $id_lang = NULL, $liteResult = true, $hideScenePosition = false)
+	/** @var boolean Active Scene */
+	public $active = true;
+
+	/** @var array Zone for image map */
+	public $zones = array();
+
+	/** @var array list of category where this scene is available */
+	public $categories = array();
+
+	/** @var array Products */
+	public $products;
+
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'scene',
+		'primary' => 'id_scene',
+		'multilang' => true,
+		'fields' => array(
+			'active' => 	array('type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true),
+
+			// Lang fields
+			'name' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 100),
+		),
+	);
+
+ 	protected static $feature_active = null;
+
+	public function __construct($id = null, $id_lang = null, $lite_result = true, $hide_scene_position = false)
 	{
-		parent::__construct((int)($id), (int)($id_lang));
-		
-		if (!$liteResult)
-			$this->products = $this->getProducts(true, (int)($id_lang), false);		
-		if ($hideScenePosition)
+		parent::__construct($id, $id_lang);
+
+		if (!$lite_result)
+			$this->products = $this->getProducts(true, (int)$id_lang, false);
+		if ($hide_scene_position)
 			$this->name = Scene::hideScenePosition($this->name);
 		$this->image_dir = _PS_SCENE_IMG_DIR_;
 	}
-	
-	public function getFields()
-	{
-		parent::validateFields();
-		$fields['active'] = (int)($this->active);
-		return $fields;
-	}
-	
-	/**
-  * Check then return multilingual fields for database interaction
-  *
-  * @return array Multilingual fields
-  */
-	public function getTranslationsFieldsChild()
-	{
-		parent::validateFieldsLang();
-		return parent::getTranslationsFields(array('name'));
-	}	
-	
-	public function update($nullValues = false)
+
+	public function update($null_values = false)
 	{
 		if (!$this->updateZoneProducts())
 			return false;
 		if (!$this->updateCategories())
 			return false;
-		return parent::update($nullValues);
+
+		if (parent::update($null_values))
+		{
+			// Refresh cache of feature detachable
+			Configuration::updateGlobalValue('PS_SCENE_FEATURE_ACTIVE', Scene::isCurrentlyUsed($this->def['table'], true));
+			return true;
+		}
+		return false;
+
 	}
-	
-	public function add($autodate = true, $nullValues = false)
+
+	public function add($autodate = true, $null_values = false)
 	{
 		if (!empty($this->zones))
 			$this->addZoneProducts($this->zones);
 		if (!empty($this->categories))
 			$this->addCategories($this->categories);
-		
-		return parent::add($autodate, $nullValues);
+
+		if (parent::add($autodate, $null_values))
+		{
+			// Put cache of feature detachable only if this new scene is active else we keep the old value
+			if ($this->active)
+				Configuration::updateGlobalValue('PS_SCENE_FEATURE_ACTIVE', '1');
+			return true;
+		}
+		return false;
 	}
-	
+
 	public function delete()
 	{
 		$this->deleteZoneProducts();
 		$this->deleteCategories();
 		if (parent::delete())
-			return $this->deleteImage();
+		{
+			return $this->deleteImage() &&
+				Configuration::updateGlobalValue('PS_SCENE_FEATURE_ACTIVE', Scene::isCurrentlyUsed($this->def['table'], true));
+		}
+		return false;
 	}
-	
-	public function deleteImage()
+
+	public function deleteImage($force_delete = false)
 	{
+		// Hack to prevent the main scene image from being deleted in AdminController::uploadImage() when a thumb image is uploaded
+		if (isset($_FILES['thumb']) && (!isset($_FILES['image']) || empty($_FILES['image']['name'])))
+			return true;
+
 		if (parent::deleteImage())
 		{
-			if (file_exists($this->image_dir.'thumbs/'.$this->id.'-thumb_scene.'.$this->image_format) 
+			if (file_exists($this->image_dir.'thumbs/'.$this->id.'-thumb_scene.'.$this->image_format)
 				&& !unlink($this->image_dir.'thumbs/'.$this->id.'-thumb_scene.'.$this->image_format))
 				return false;
 		}
@@ -119,116 +131,139 @@ class SceneCore extends ObjectModel
 			return false;
 		return true;
 	}
-	
+
 	public function addCategories($categories)
 	{
-		$result = true;
-		foreach ($categories AS $category)
+		$data = array();
+		foreach ($categories as $category)
 		{
-			if (!Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'scene_category` ( `id_scene` , `id_category`) VALUES ('.(int)($this->id).', '.(int)($category).')'))
-				$result = false;
+			$data[] = array(
+				'id_scene' => (int)$this->id,
+				'id_category' => (int)$category,
+			);
 		}
-		return $result;
+		return Db::getInstance()->insert('scene_category', $data);
 	}
-	
+
 	public function deleteCategories()
 	{
-		return Db::getInstance()->Execute('
-		DELETE FROM `'._DB_PREFIX_.'scene_category` 
-		WHERE `id_scene` = '.(int)($this->id));
+		return Db::getInstance()->execute('
+		DELETE FROM `'._DB_PREFIX_.'scene_category`
+		WHERE `id_scene` = '.(int)$this->id);
 	}
-	
+
 	public function updateCategories()
 	{
 		if (!$this->deleteCategories())
 			return false;
-		if (!empty($this->categories) AND !$this->addCategories($this->categories))
+		if (!empty($this->categories) && !$this->addCategories($this->categories))
 				return false;
 		return true;
 	}
-	
+
 	public function addZoneProducts($zones)
 	{
-		$result = true;
-		foreach ($zones AS $zone)
+		$data = array();
+		foreach ($zones as $zone)
 		{
-			$sql = 'INSERT INTO `'._DB_PREFIX_.'scene_products` ( `id_scene` , `id_product` , `x_axis` , `y_axis` , `zone_width` , `zone_height`) VALUES
-				 ('.(int)($this->id).', '.(int)($zone['id_product']).', '.(int)($zone['x1']).', '.(int)($zone['y1']).', '.(int)($zone['width']).', '.(int)($zone['height']).')';
-			if (!Db::getInstance()->Execute($sql))
-				$result = false;
+			$data[] = array(
+				'id_scene' => (int)$this->id,
+				'id_product' => (int)$zone['id_product'],
+				'x_axis' => (int)$zone['x1'],
+				'y_axis' => (int)$zone['y1'],
+				'zone_width' => (int)$zone['width'],
+				'zone_height' => (int)$zone['height'],
+			);
 		}
-		return $result;
+
+		return Db::getInstance()->insert('scene_products', $data);
 	}
-	
+
 	public function deleteZoneProducts()
 	{
-		return Db::getInstance()->Execute('
+		return Db::getInstance()->execute('
 		DELETE FROM `'._DB_PREFIX_.'scene_products`
-		WHERE `id_scene` = '.(int)($this->id));
+		WHERE `id_scene` = '.(int)$this->id);
 	}
-	
+
 	public function updateZoneProducts()
 	{
 		if (!$this->deleteZoneProducts())
 			return false;
-		if ($this->zones AND !$this->addZoneProducts($this->zones))
+		if ($this->zones && !$this->addZoneProducts($this->zones))
 			return false;
 		return true;
 	}
-	
-	/**
-	* Get all scenes of a category
-	*
-	* @return array Products
-	*/
-	public static function getScenes($id_category, $id_lang = NULL, $onlyActive = true, $liteResult = true, $hideScenePosition = true)
-	{
-		$id_lang = is_null($id_lang) ? _USER_ID_LANG_ : (int)($id_lang);
 
-		$scenes = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-		SELECT s.*
-		FROM `'._DB_PREFIX_.'scene_category` sc
-		LEFT JOIN `'._DB_PREFIX_.'scene` s ON (sc.id_scene = s.id_scene)
-		LEFT JOIN `'._DB_PREFIX_.'scene_lang` sl ON (sl.id_scene = s.id_scene)
-		WHERE sc.id_category = '.(int)($id_category).'	AND sl.id_lang = '.(int)($id_lang).($onlyActive ? ' AND s.active = 1' : '').'
-		ORDER BY sl.name ASC');
-		
-		if (!$liteResult AND $scenes)
-			foreach($scenes AS &$scene)
-				$scene = new Scene((int)($scene['id_scene']), (int)($id_lang), false, $hideScenePosition);
+	/**
+	 * Get all scenes of a category
+	 *
+	 * @return array Products
+	 */
+	public static function getScenes($id_category, $id_lang = null, $only_active = true, $lite_result = true, $hide_scene_position = true, Context $context = null)
+	{
+		if (!Scene::isFeatureActive())
+			return array();
+
+		if (!$context)
+			$context = Context::getContext();
+		$id_lang = is_null($id_lang) ? $context->language->id : $id_lang;
+
+		$sql = 'SELECT s.*
+				FROM `'._DB_PREFIX_.'scene_category` sc
+				LEFT JOIN `'._DB_PREFIX_.'scene` s ON (sc.id_scene = s.id_scene)
+				'.Shop::addSqlAssociation('scene', 's').'
+				LEFT JOIN `'._DB_PREFIX_.'scene_lang` sl ON (sl.id_scene = s.id_scene)
+				WHERE sc.id_category = '.(int)$id_category.'
+					AND sl.id_lang = '.(int)$id_lang
+					.($only_active ? ' AND s.active = 1' : '').'
+				ORDER BY sl.name ASC';
+		$scenes = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
+
+		if (!$lite_result && $scenes)
+			foreach ($scenes as &$scene)
+				$scene = new Scene($scene['id_scene'], $id_lang, false, $hide_scene_position);
 		return $scenes;
 	}
-	
+
 	/**
 	* Get all products of this scene
 	*
 	* @return array Products
 	*/
-	public function getProducts($onlyActive = true, $id_lang = NULL, $liteResult = true)
+	public function getProducts($only_active = true, $id_lang = null, $lite_result = true, Context $context = null)
 	{
-		global $link;
-		
-		$id_lang = is_null($id_lang) ? _USER_ID_LANG_ : (int)($id_lang);
-		
-		$products = Db::getInstance()->ExecuteS('
+		if (!Scene::isFeatureActive())
+			return array();
+
+		if (!$context)
+			$context = Context::getContext();
+		$id_lang = is_null($id_lang) ? $context->language->id : $id_lang;
+
+		$products = Db::getInstance()->executeS('
 		SELECT s.*
 		FROM `'._DB_PREFIX_.'scene_products` s
 		LEFT JOIN `'._DB_PREFIX_.'product` p ON (p.id_product = s.id_product)
-		WHERE s.id_scene = '.(int)($this->id).($onlyActive ? ' AND p.active = 1' : ''));
-		
-		if (!$liteResult AND $products)
-			foreach ($products AS &$product)
+		'.Shop::addSqlAssociation('product', 'p').'
+		WHERE s.id_scene = '.(int)$this->id.($only_active ? ' AND product_shop.active = 1' : ''));
+
+		if (!$lite_result && $products)
+			foreach ($products as &$product)
 			{
-				$product['details'] = new Product((int)($product['id_product']), !$liteResult, (int)($id_lang));
-				$product['link'] = $link->getProductLink((int)($product['details']->id), $product['details']->link_rewrite, $product['details']->category, $product['details']->ean13);
-				$cover = Product::getCover((int)($product['details']->id));
+				$product['details'] = new Product($product['id_product'], !$lite_result, $id_lang);
+				$product['link'] = $context->link->getProductLink(
+					$product['details']->id,
+					$product['details']->link_rewrite,
+					$product['details']->category,
+					$product['details']->ean13
+				);
+				$cover = Product::getCover($product['details']->id);
 				if (is_array($cover))
 					$product = array_merge($cover, $product);
 			}
-		
 		return $products;
 	}
-	
+
 	/**
 	* Get categories where scene is indexed
 	*
@@ -237,12 +272,12 @@ class SceneCore extends ObjectModel
 	*/
 	public static function getIndexedCategories($id_scene)
 	{
-		return Db::getInstance()->ExecuteS('
+		return Db::getInstance()->executeS('
 		SELECT `id_category`
 		FROM `'._DB_PREFIX_.'scene_category`
-		WHERE `id_scene` = '.(int)($id_scene));
+		WHERE `id_scene` = '.(int)$id_scene);
 	}
-	
+
 	/**
 	  * Hide scene prefix used for position
 	  *
@@ -252,6 +287,16 @@ class SceneCore extends ObjectModel
 	public static function hideScenePosition($name)
 	{
 		return preg_replace('/^[0-9]+\./', '', $name);
+	}
+
+	/**
+	 * This method is allow to know if a feature is used or active
+	 * @since 1.5.0.1
+	 * @return bool
+	 */
+	public static function isFeatureActive()
+	{
+		return Configuration::get('PS_SCENE_FEATURE_ACTIVE');
 	}
 }
 

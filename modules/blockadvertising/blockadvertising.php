@@ -20,43 +20,32 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16943 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 if (!defined('_PS_VERSION_'))
 	exit;
-	
+
 class BlockAdvertising extends Module
 {
-	public $adv_link;
-
-	/**
-	 * adv_title contains string for title and alt attributes
-	 * 
-	 * @var mixed
-	 */
+	/* Title associated to the image */
 	public $adv_title;
-	/**
-	 * adv_img contains url to the image to display.
-	 * 
-	 * @var mixed
-	 */
+	
+	/* Link associated to the image */
+	public $adv_link;
+	
+	/* Name of the image without extension */
+	public $adv_imgname;
+	
+	/* Image path with extension */
 	public $adv_img;
-
-	/**
-	 * adv_imgname is the filename of the image to display
-	 * @TODO make it configurable for SEO, but need a function to clean filename
-	 * @var string
-	 */
-	public $adv_imgname = 'advertising_custom';
 
 	public function __construct()
 	{
 		$this->name = 'blockadvertising';
 		$this->tab = 'advertising_marketing';
-		$this->version = 0.3;
+		$this->version = '0.5';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
@@ -64,97 +53,110 @@ class BlockAdvertising extends Module
 
 		$this->displayName = $this->l('Block advertising');
 		$this->description = $this->l('Adds a block to display an advertisement.');
+		
+		$this->initialize();
+	}
 
-		if (!file_exists(_PS_MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT')))
-		{
-			$this->adv_imgname = 'advertising';
-			if (!file_exists(_PS_MODULE_DIR_.$this->name.'/advertising.jpg'))
-				$this->adv_imgname = '';
-			else
-				Configuration::updateValue('BLOCKADVERT_IMG_EXT','jpg');
-		}
+	/*
+	 * Set the properties of the module, like the link to the image and the title (contextual to the current shop context)
+	 */
+	protected function initialize()
+	{
+		$this->adv_imgname = 'advertising';
+		if ((Shop::getContext() == Shop::CONTEXT_GROUP  || Shop::getContext() == Shop::CONTEXT_SHOP)
+			&& file_exists(_PS_MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'-g'.$this->context->shop->getContextShopGroupID().'.'.Configuration::get('BLOCKADVERT_IMG_EXT')))
+			$this->adv_imgname .= '-g'.$this->context->shop->getContextShopGroupID();
+		if (Shop::getContext() == Shop::CONTEXT_SHOP
+			&& file_exists(_PS_MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'-s'.$this->context->shop->getContextShopID().'.'.Configuration::get('BLOCKADVERT_IMG_EXT')))
+			$this->adv_imgname .= '-s'.$this->context->shop->getContextShopID();
 
-		if (!empty($this->adv_imgname))
-			$this->adv_img = Tools::getMediaServer($this->name)._MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT');
-
+		$this->adv_img = Tools::getMediaServer($this->name)._MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT');
 		$this->adv_link = htmlentities(Configuration::get('BLOCKADVERT_LINK'), ENT_QUOTES, 'UTF-8');
 		$this->adv_title = htmlentities(Configuration::get('BLOCKADVERT_TITLE'), ENT_QUOTES, 'UTF-8');
 	}
-
-
+	
 	public function install()
 	{
-		Configuration::updateValue('BLOCKADVERT_LINK', 'http://www.prestashop.com');
-		if (!parent::install())
-			return false;
-		if (!$this->registerHook('leftColumn') OR !$this->registerHook('rightColumn'))
-			return false;
-		return true;
+		Configuration::updateGlobalValue('BLOCKADVERT_LINK', 'http://www.prestashop.com/');
+		Configuration::updateGlobalValue('BLOCKADVERT_TITLE', 'PrestaShop');
+		// Try to update with the extension of the image that exists in the module directory
+		foreach (scandir(_PS_MODULE_DIR_.$this->name) as $file)
+			if (in_array($file, array('advertising.jpg', 'advertising.gif', 'advertising.png')))
+				Configuration::updateGlobalValue('BLOCKADVERT_IMG_EXT', substr($file, strrpos($file, '.') + 1));
+
+		return (parent::install() && $this->registerHook('leftColumn'));
+	}
+	
+	public function uninstall()
+	{
+		Configuration::deleteByName('BLOCKADVERT_LINK');
+		Configuration::deleteByName('BLOCKADVERT_TITLE');
+		Configuration::deleteByName('BLOCKADVERT_IMG_EXT');
+		return (parent::uninstall());
 	}
 
 	/**
-	 * _deleteCurrentImg delete current image, (so this will use default image)
-	 * 
+	 * delete the contextual image (it is not allowed to delete the default image)
+	 *
 	 * @return void
 	 */
 	private function _deleteCurrentImg()
 	{
-
-		if (file_exists(_PS_MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT')))
+		// Delete the image file
+		if ($this->adv_imgname != 'advertising' && file_exists(_PS_MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT')))
 			unlink(_PS_MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT'));
-		$this->adv_imgname = $this->adv_imgname == 'advertising_custom'?'advertising':'';
+		
+		// Update the extension to the global value or the shop group value if available
+		Configuration::deleteFromContext('BLOCKADVERT_IMG_EXT');
+		Configuration::updateValue('BLOCKADVERT_IMG_EXT', Configuration::get('BLOCKADVERT_IMG_EXT'));
+
+		// Reset the properties of the module
+		$this->initialize();
 	}
-	/**
-	 * postProcess update configuration
-	 * @TODO adding alt and title attributes for <img> and <a>
-	 * @var string
-	 * @return void
-	 */
+
 	public function postProcess()
 	{
-		global $currentIndex;
+		if (Tools::isSubmit('submitDeleteImgConf'))
+			$this->_deleteCurrentImg();
 
 		$errors = '';
-		if (Tools::isSubmit('submitDeleteImgConf'))
-			$this->_deleteCurrentImg();	
-
 		if (Tools::isSubmit('submitAdvConf'))
 		{
-			$file = false;
-			if (isset($_FILES['adv_img']) AND isset($_FILES['adv_img']['tmp_name']) AND !empty($_FILES['adv_img']['tmp_name']))
+			if (isset($_FILES['adv_img']) && isset($_FILES['adv_img']['tmp_name']) && !empty($_FILES['adv_img']['tmp_name']))
 			{
-				if ($error = checkImage($_FILES['adv_img'], Tools::convertBytes(ini_get('upload_max_filesize'))))
+				if ($error = ImageManager::validateUpload($_FILES['adv_img'], Tools::convertBytes(ini_get('upload_max_filesize'))))
 					$errors .= $error;
-				elseif ($dot_pos = strrpos($_FILES['adv_img']['name'],'.'))
+				else
 				{
-					// as checkImage tell us it's a good image, we'll just copy the extension
+					Configuration::updateValue('BLOCKADVERT_IMG_EXT', substr($_FILES['adv_img']['name'], strrpos($_FILES['adv_img']['name'], '.') + 1));
 
-					$this->_deleteCurrentImg();
+					// Set the image name with a name contextual to the shop context
 					$this->adv_imgname = 'advertising';
-					$ext = substr($_FILES['adv_img']['name'], $dot_pos+1);
-					$newname = 'advertising_custom';
+					if (Shop::getContext() == Shop::CONTEXT_GROUP)
+						$this->adv_imgname = 'advertising'.'-g'.(int)$this->context->shop->getContextShopGroupID();
+					elseif (Shop::getContext() == Shop::CONTEXT_SHOP)
+						$this->adv_imgname = 'advertising'.'-s'.(int)$this->context->shop->getContextShopID();
 
-					if (!move_uploaded_file($_FILES['adv_img']['tmp_name'],_PS_MODULE_DIR_.$this->name.'/'.$newname.'.'.$ext))
+					// Copy the image in the module directory with its new name
+					if (!move_uploaded_file($_FILES['adv_img']['tmp_name'], _PS_MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT')))
 						$errors .= $this->l('Error move uploaded file');
-					else
-						$this->adv_imgname = $newname;
-
-					Configuration::updateValue('BLOCKADVERT_IMG_EXT',$ext);
-					$this->adv_img = Tools::getMediaServer($this->name)._MODULE_DIR_.$this->name.'/'.$this->adv_imgname.'.'.Configuration::get('BLOCKADVERT_IMG_EXT');
 				}
 			}
-
+			
+			// If the link is not set, then delete it in order to use the next default value (either the global value or the group value)
 			if ($link = Tools::getValue('adv_link'))
-			{
 				Configuration::updateValue('BLOCKADVERT_LINK', $link);
-				$this->adv_link = htmlentities($link, ENT_QUOTES, 'UTF-8');
-			}
-
+			elseif (Shop::getContext() == Shop::CONTEXT_SHOP || Shop::getContext() == Shop::CONTEXT_GROUP)
+				Configuration::deleteFromContext('BLOCKADVERT_LINK');
+				
+			// If the title is not set, then delete it in order to use the next default value (either the global value or the group value)
 			if ($title = Tools::getValue('adv_title'))
-			{
 				Configuration::updateValue('BLOCKADVERT_TITLE', $title);
-				$this->adv_title = htmlentities($title, ENT_QUOTES, 'UTF-8');
-			}
+			elseif (Shop::getContext() == Shop::CONTEXT_SHOP || Shop::getContext() == Shop::CONTEXT_GROUP)
+				Configuration::deleteFromContext('BLOCKADVERT_TITLE');
+			
+			// Reset the module properties
+			$this->initialize();
 		}
 		if ($errors)
 			echo $this->displayError($errors);
@@ -162,59 +164,63 @@ class BlockAdvertising extends Module
 
 	/**
 	 * getContent used to display admin module form
-	 * 
-	 * @return void
+	 *
+	 * @return string content
 	 */
 	public function getContent()
 	{
-		global $protocol_content;
-		
 		$this->postProcess();
-		$output = '';
-		$output .= '
-<form action="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'" method="post" enctype="multipart/form-data">
-<fieldset><legend>'.$this->l('Advertising block configuration').'</legend>
-<a href="'.$this->adv_link.'" target="_blank" title="'.$this->adv_title.'">';
+		$output = '
+		<form action="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'" method="post" enctype="multipart/form-data">
+			<fieldset>
+				<legend>'.$this->l('Advertising block configuration').'</legend>';
 		if ($this->adv_img)
 		{
-			$output .= '<img src="'.$protocol_content.$this->adv_img.'" alt="'.$this->adv_title.'" title="'.$this->adv_title.'" style="height:163px;margin-left: 100px;width:163px"/>';
-			$output .= '<input class="button" type="submit" name="submitDeleteImgConf" value="'.$this->l('Delete image').'" style=""/>';
+			$output .= '
+			<a href="'.$this->adv_link.'" target="_blank" title="'.$this->adv_title.'">
+				<img src="'.$this->context->link->protocol_content.$this->adv_img.'" alt="'.$this->adv_title.'" title="'.$this->adv_title.'"
+					style="width:155px;height:163px;margin-left:100px"/>
+			</a>';
+			if ($this->adv_imgname == 'advertising')
+				$output .= $this->l('You cannot delete the default image (but you can change it below).');
+			else
+				$output .= '<input class="button" type="submit" name="submitDeleteImgConf" value="'.$this->l('Delete image').'" style=""/>';
 		}
 		else
 			$output .= '<div style="margin-left: 100px;width:163px;">'.$this->l('no image').'</div>';
-		$output .= '</a>';
-		$output .= '<br/>
-<br/>
-<label for="adv_img">'.$this->l('Change image').'&nbsp;&nbsp;</label><input id="adv_img" type="file" name="adv_img" />
-( '.$this->l('Image will be displayed as 155x163').' )
-<br/>
-<br class="clear"/>
-<label for="adv_link">'.$this->l('Image link').'&nbsp;&nbsp;</label><input id="adv_link" type="text" name="adv_link" value="'.$this->adv_link.'" />
-<br class="clear"/>
-<br/>
-<label for="adv_title">'.$this->l('Title').'&nbsp;&nbsp;</label><input id="adv_title" type="text" name="adv_title" value="'.$this->adv_title.'" />
-<br class="clear"/>
-<br/>
-<input class="button" type="submit" name="submitAdvConf" value="'.$this->l('validate').'" style="margin-left: 200px;"/>
-</fieldset>
-</form>
-';
+		$output .= '<br/><br/>
+				<label for="adv_img">'.$this->l('Change image').'&nbsp;&nbsp;</label>
+				<div class="margin-form">
+					<input id="adv_img" type="file" name="adv_img" />
+					<p>'.$this->l('Image will be displayed as 155x163.').'</p>
+				</div>
+				<br class="clear"/>
+				<label for="adv_link">'.$this->l('Image link').'</label>
+				<div class="margin-form">
+					<input id="adv_link" type="text" name="adv_link" value="'.$this->adv_link.'" style="width:250px" />
+				</div>
+				<br class="clear"/>
+				<label for="adv_title">'.$this->l('Title').'</label>
+				<div class="margin-form">
+					<input id="adv_title" type="text" name="adv_title" value="'.$this->adv_title.'" style="width:250px" />
+				</div>
+				<br class="clear"/>
+				<div class="margin-form">
+					<input class="button" type="submit" name="submitAdvConf" value="'.$this->l('Validate').'"/>
+				</div>
+				<br class="clear"/>
+			</fieldset>
+		</form>';
 		return $output;
 	}
 
-	/**
-	* Returns module content
-	*
-	* @param array $params Parameters
-	* @return string Content
-	*/
 	public function hookRightColumn($params)
 	{
-		global $smarty, $protocol_content;
-
-		$smarty->assign('image', $protocol_content.$this->adv_img);
-		$smarty->assign('adv_link', $this->adv_link);
-		$smarty->assign('adv_title', $this->adv_title);
+		$this->smarty->assign(array(
+			'image' => $this->context->link->protocol_content.$this->adv_img,
+			'adv_link' => $this->adv_link,
+			'adv_title' => $this->adv_title,
+		));
 
 		return $this->display(__FILE__, 'blockadvertising.tpl');
 	}
@@ -226,9 +232,6 @@ class BlockAdvertising extends Module
 
 	public function hookHeader($params)
 	{
-		Tools::addCSS($this->_path.'blockadvertising.css', 'all');
+		$this->context->controller->addCSS($this->_path.'blockadvertising.css', 'all');
 	}
-
 }
-
-

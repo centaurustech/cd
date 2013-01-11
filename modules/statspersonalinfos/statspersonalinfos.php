@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,11 +29,11 @@ if (!defined('_PS_VERSION_'))
 
 class StatsPersonalInfos extends ModuleGraph
 {
-	private $_html = '';
+	private $html = '';
 	private $_query = '';
 	private $_option;
 
-	function __construct()
+	public function __construct()
 	{
 		$this->name = 'statspersonalinfos';
 		$this->tab = 'analytics_stats';
@@ -50,51 +49,50 @@ class StatsPersonalInfos extends ModuleGraph
 
 	public function install()
 	{
-		return (parent::install() AND $this->registerHook('AdminStatsModules'));
+		return (parent::install() && $this->registerHook('AdminStatsModules'));
 	}
-		
+
 	public function hookAdminStatsModules($params)
 	{
-		$this->_html = '<fieldset class="width3"><legend><img src="../modules/'.$this->name.'/logo.gif" /> '.$this->displayName.'</legend>';
-		if (sizeof(Customer::getCustomers()))
+		$this->html = '<div class="blocStats"><h2 class="icon-'.$this->name.'"><span></span>'.$this->displayName.'</h2>';
+		if (count(Customer::getCustomers()))
 		{
 			if (Tools::getValue('export'))
-				if (Tools::getValue('exportType') =='gender')
+				if (Tools::getValue('exportType') == 'gender')
 					$this->csvExport(array('type' => 'pie', 'option' => 'gender'));
-				elseif (Tools::getValue('exportType') =='age')
+				else if (Tools::getValue('exportType') == 'age')
 					$this->csvExport(array('type' => 'pie', 'option' => 'age'));
-				elseif (Tools::getValue('exportType') =='country')
+				else if (Tools::getValue('exportType') == 'country')
 					$this->csvExport(array('type' => 'pie', 'option' => 'country'));
-				elseif (Tools::getValue('exportType') =='currency')
+				else if (Tools::getValue('exportType') == 'currency')
 					$this->csvExport(array('type' => 'pie', 'option' => 'currency'));
-				elseif (Tools::getValue('exportType') =='language')
+				else if (Tools::getValue('exportType') == 'language')
 					$this->csvExport(array('type' => 'pie', 'option' => 'language'));
-			
-			$this->_html .= '
-			
-				<center><p><img src="../img/admin/down.gif" />'.$this->l('Gender distribution allows you to determine the percentage of men and women among your customers.').'</p>
-				'.ModuleGraph::engine(array('type' => 'pie', 'option' => 'gender')).'<br /></center>
-				<p><a href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=gender"><img src="../img/admin/asterisk.gif" />'.$this->l('CSV Export').'</a></p>
+
+			$this->html .= '
+				<p><img src="../img/admin/down.gif" />'.$this->l('Gender distribution allows you to determine the percentage of men and women among your customers.').'</p>
+				<div>'.$this->engine(array('type' => 'pie', 'option' => 'gender')).'</div><br />
+				<p><a class="button export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=gender"><span>'.$this->l('CSV Export').'</span></a></p>
 				<br class="clear" /><br />
-				<center><p><img src="../img/admin/down.gif" />'.$this->l('Age ranges allows you to determine in which age range your customers are.').'</p>
-				'.ModuleGraph::engine(array('type' => 'pie', 'option' => 'age')).'<br /></center>
-				<p><a href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=age"><img src="../img/admin/asterisk.gif" />'.$this->l('CSV Export').'</a></p><br /><br />
-				<center><p><img src="../img/admin/down.gif" />'.$this->l('Country distribution allows you to determine in which part of the world your customers are shopping from.').'</p>
-				'.ModuleGraph::engine(array('type' => 'pie', 'option' => 'country')).'<br /></center>
-				<p><a href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=country"><img src="../img/admin/asterisk.gif" />'.$this->l('CSV Export').'</a></p><br /><br />
-				<center><p><img src="../img/admin/down.gif" />'.$this->l('Currency ranges allows you to determine which currencies your customers are using.').'</p>
-				'.ModuleGraph::engine(array('type' => 'pie', 'option' => 'currency')).'<br /></center>
-				<p><a href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=currency"><img src="../img/admin/asterisk.gif" />'.$this->l('CSV Export').'</a></p><br /><br />
-				<center><p><img src="../img/admin/down.gif" />'.$this->l('Language distribution allows you to determine the general languages your customers are using on your shop.').'</p>
-				'.ModuleGraph::engine(array('type' => 'pie', 'option' => 'language')).'<br /></center>
-				<p><a href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=language"><img src="../img/admin/asterisk.gif" />'.$this->l('CSV Export').'</a></p>
+				<p><img src="../img/admin/down.gif" />'.$this->l('Age ranges allows you to determine in which age range your customers are.').'</p>
+				<div>'.$this->engine(array('type' => 'pie', 'option' => 'age')).'</div><br />
+				<p><a class="button export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=age"><span>'.$this->l('CSV Export').'</span></a></p><br /><br />
+				<p><img src="../img/admin/down.gif" />'.$this->l('Country distribution allows you to determine in which part of the world your customers are shopping from.').'</p>
+				<div>'.$this->engine(array('type' => 'pie', 'option' => 'country')).'</div><br />
+				<p><a class="button export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=country"><span>'.$this->l('CSV Export').'</span></a></p><br /><br />
+				<p><img src="../img/admin/down.gif" />'.$this->l('Currency ranges allows you to determine which currencies your customers are using.').'</p>
+				<div>'.$this->engine(array('type' => 'pie', 'option' => 'currency')).'</div><br />
+				<p><a class="button export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=currency"><span>'.$this->l('CSV Export').'</span></a></p><br /><br />
+				<p><img src="../img/admin/down.gif" />'.$this->l('Language distribution allows you to determine the general languages your customers are using on your shop.').'</p>
+				<div>'.$this->engine(array('type' => 'pie', 'option' => 'language')).'</div><br />
+				<p><a class="button export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1&exportType=language"><span>'.$this->l('CSV Export').'</span></a></p>
 			</center>';
 		}
 		else
-			$this->_html .= '<p>'.$this->l('No customers registered yet.').'</p>';
-		$this->_html .= '
-		</fieldset><br />
-		<fieldset class="width3"><legend><img src="../img/admin/comment.gif" /> '.$this->l('Guide').'</legend>
+			$this->html .= '<p>'.$this->l('No customers registered yet.').'</p>';
+		$this->html .= '
+		</div><br />
+		<div class="blocStats"><h2 class="icon-guide"><span></span>'.$this->l('Guide').'</h2>
 			<h2>'.$this->l('Target your audience').'</h2>
 			<p>
 				'.$this->l('In order for each message to have an impact, you need to know to whom it should be addressed.').'
@@ -109,157 +107,198 @@ class StatsPersonalInfos extends ModuleGraph
 					<li class="bullet">'.$this->l('Contacting a group of clients by e-mail / newsletter.').'</li>
 				</ul>
 			</p><br />
-		</fieldset>';
-		return $this->_html;
+		</div>';
+		return $this->html;
 	}
 
 	public function setOption($option, $layers = 1)
 	{
 		$this->_option = $option;
 	}
-	
+
 	protected function getData($layers)
 	{
-		global $cookie;
-		
 		switch ($this->_option)
 		{
 			case 'gender':
 				$this->_titles['main'] = $this->l('Gender distribution');
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-				SELECT c.`id_gender`, COUNT(c.`id_customer`) AS total
-				FROM `'._DB_PREFIX_.'customer` c
-				GROUP BY c.`id_gender`');
-				$gender = array(1 => $this->l('Male'), 2 => $this->l('Female'), 9 => $this->l('Unknown'), 0 => $this->l('Unknown'));
+				$genders = array(
+					0 => $this->l('Male'),
+					1 => $this->l('Female'),
+					2 => $this->l('Unknown'),
+				);
+
+				$sql = 'SELECT g.type, c.id_gender, COUNT(c.id_customer) AS total
+						FROM '._DB_PREFIX_.'customer c
+						LEFT JOIN '._DB_PREFIX_.'gender g ON c.id_gender = g.id_gender
+						WHERE 1
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER, 'c').'
+						GROUP BY c.id_gender';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
+
+				$gendersResults = array();
 				foreach ($result as $row)
 				{
-					$this->_values[] = $row['total'];
-					$this->_legend[] = $gender[$row['id_gender']];
+					$type = (is_null($row['type'])) ? 2 : $row['type'];
+					if (!isset($gendersResults[$type]))
+						$gendersResults[$type] = 0;
+					$gendersResults[$type] += $row['total'];
 				}
-				break;
+
+				foreach ($gendersResults as $type => $total)
+				{
+					$this->_values[] = $total;
+					$this->_legend[] = $genders[$type];
+				}
+			break;
+
 			case 'age':
 				$this->_titles['main'] = $this->l('Age ranges');
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-				SELECT COUNT(c.`id_customer`) as total
-				FROM `'._DB_PREFIX_.'customer` c
-				WHERE (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) < 18 
-				AND c.`birthday` IS NOT NULL');
-				if (isset($result['total']) AND $result['total'])
+
+				// 0 - 18 years
+				$sql = 'SELECT COUNT(`id_customer`) as total
+						FROM `'._DB_PREFIX_.'customer`
+						WHERE (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) < 18
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER).'
+							AND `birthday` IS NOT NULL';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
+				if (isset($result['total']) && $result['total'])
 				{
 					$this->_values[] = $result['total'];
 					$this->_legend[] = $this->l('0-18 years old');
 				}
-				
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-				SELECT COUNT(c.`id_customer`) as total
-				FROM `'._DB_PREFIX_.'customer` c
-				WHERE (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) >= 18
-				AND (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) < 25
-				AND c.`birthday` IS NOT NULL');
-				if (isset($result['total']) AND $result['total'])
+
+				// 18 - 24 years
+				$sql = 'SELECT COUNT(`id_customer`) as total
+						FROM `'._DB_PREFIX_.'customer`
+						WHERE (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) >= 18
+							AND (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) < 25
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER).'
+							AND `birthday` IS NOT NULL';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
+				if (isset($result['total']) && $result['total'])
 				{
 					$this->_values[] = $result['total'];
 					$this->_legend[] = $this->l('18-24 years old');
 				}
 
- 				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-				SELECT COUNT(c.`id_customer`) as total
-				FROM `'._DB_PREFIX_.'customer` c
-				WHERE (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) >= 25
-				AND (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) < 35
-				AND c.`birthday` IS NOT NULL');
-				if (isset($result['total']) AND $result['total'])
+				// 25 - 34 years
+				$sql = 'SELECT COUNT(`id_customer`) as total
+						FROM `'._DB_PREFIX_.'customer`
+						WHERE (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) >= 25
+							AND (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) < 35
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER).'
+							AND `birthday` IS NOT NULL';
+ 				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
+				if (isset($result['total']) && $result['total'])
 				{
 					$this->_values[] = $result['total'];
 					$this->_legend[] = $this->l('25-34 years old');
 				}
-				
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-				SELECT COUNT(c.`id_customer`) as total
-				FROM `'._DB_PREFIX_.'customer` c
-				WHERE (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) >= 35
-				AND (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) < 50
-				AND c.`birthday` IS NOT NULL');
-				if (isset($result['total']) AND $result['total'])
+
+				// 35 - 49 years
+				$sql = 'SELECT COUNT(`id_customer`) as total
+						FROM `'._DB_PREFIX_.'customer`
+						WHERE (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) >= 35
+							AND (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) < 50
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER).'
+							AND `birthday` IS NOT NULL';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
+				if (isset($result['total']) && $result['total'])
 				{
 					$this->_values[] = $result['total'];
 					$this->_legend[] = $this->l('35-49 years old');
 				}
-				
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-				SELECT COUNT(c.`id_customer`) as total
-				FROM `'._DB_PREFIX_.'customer` c
-				WHERE (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) >= 50
-				AND (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) < 60
-				AND c.`birthday` IS NOT NULL');
-				if (isset($result['total']) AND $result['total'])
+
+				// 50 - 59 years
+				$sql = 'SELECT COUNT(`id_customer`) as total
+						FROM `'._DB_PREFIX_.'customer`
+						WHERE (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) >= 50
+							AND (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) < 60
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER).'
+							AND `birthday` IS NOT NULL';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
+				if (isset($result['total']) && $result['total'])
 				{
 					$this->_values[] = $result['total'];
 					$this->_legend[] = $this->l('50-59 years old');
 				}
-				
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-				SELECT COUNT(c.`id_customer`) as total
-				FROM `'._DB_PREFIX_.'customer` c
-				WHERE (YEAR(CURDATE()) - YEAR(c.`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(c.`birthday`, 5)) >= 60
-				AND c.`birthday` IS NOT NULL');
-				if (isset($result['total']) AND $result['total'])
+
+				// More than 60 years
+				$sql = 'SELECT COUNT(`id_customer`) as total
+						FROM `'._DB_PREFIX_.'customer`
+						WHERE (YEAR(CURDATE()) - YEAR(`birthday`)) - (RIGHT(CURDATE(), 5) < RIGHT(`birthday`, 5)) >= 60
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER).'
+							AND `birthday` IS NOT NULL';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
+				if (isset($result['total']) && $result['total'])
 				{
 					$this->_values[] = $result['total'];
 					$this->_legend[] = $this->l('60 years old and more');
 				}
-				
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-				SELECT COUNT(c.`id_customer`) as total
-				FROM `'._DB_PREFIX_.'customer` c
-				WHERE c.`birthday` IS NULL');
-				if (isset($result['total']) AND $result['total'])
+
+				// Total unknown
+				$sql = 'SELECT COUNT(`id_customer`) as total
+						FROM `'._DB_PREFIX_.'customer`
+						WHERE `birthday` IS NULL
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER);
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
+				if (isset($result['total']) && $result['total'])
 				{
 					$this->_values[] = $result['total'];
 					$this->_legend[] = $this->l('Unknown');
 				}
-				break;
+			break;
+
 			case 'country':
 				$this->_titles['main'] = $this->l('Country distribution');
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-				SELECT cl.`name`, COUNT(c.`id_country`) AS total
-				FROM `'._DB_PREFIX_.'address` a
-				LEFT JOIN `'._DB_PREFIX_.'country` c ON a.`id_country` = c.`id_country`
-				LEFT JOIN `'._DB_PREFIX_.'country_lang` cl ON (c.`id_country` = cl.`id_country` AND cl.`id_lang` = '.(int)($cookie->id_lang).')
-				WHERE a.id_customer != 0
-				GROUP BY c.`id_country`');
+				$sql = 'SELECT cl.`name`, COUNT(c.`id_country`) AS total
+						FROM `'._DB_PREFIX_.'address` a
+						LEFT JOIN `'._DB_PREFIX_.'customer` cu ON cu.id_customer = a.id_customer
+						LEFT JOIN `'._DB_PREFIX_.'country` c ON a.`id_country` = c.`id_country`
+						LEFT JOIN `'._DB_PREFIX_.'country_lang` cl ON (c.`id_country` = cl.`id_country` AND cl.`id_lang` = '.(int)$this->context->language->id.')
+						WHERE a.id_customer != 0
+							'.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER, 'cu').'
+						GROUP BY c.`id_country`';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
 				foreach ($result as $row)
 				{
-				    $this->_values[] = $row['total'];
-				    $this->_legend[] = $row['name'];
+					$this->_values[] = $row['total'];
+					$this->_legend[] = $row['name'];
 				}
-				break;
+			break;
+
 			case 'currency':
 				$this->_titles['main'] = $this->l('Currency distribution');
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-				SELECT c.`name`, COUNT(c.`id_currency`) AS total
-				FROM `'._DB_PREFIX_.'orders` o
-				LEFT JOIN `'._DB_PREFIX_.'currency` c ON o.`id_currency` = c.`id_currency`
-				GROUP BY c.`id_currency`');
+				$sql = 'SELECT c.`name`, COUNT(c.`id_currency`) AS total
+						FROM `'._DB_PREFIX_.'orders` o
+						LEFT JOIN `'._DB_PREFIX_.'currency` c ON o.`id_currency` = c.`id_currency`
+						WHERE 1
+							'.Shop::addSqlRestriction(Shop::SHARE_ORDER, 'o').'
+						GROUP BY c.`id_currency`';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
 				foreach ($result as $row)
 				{
-				    $this->_values[] = $row['total'];
-				    $this->_legend[] = $row['name'];
+					$this->_values[] = $row['total'];
+					$this->_legend[] = $row['name'];
 				}
-				break;
+			break;
+
 			case 'language':
 				$this->_titles['main'] = $this->l('Language distribution');
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-				SELECT c.`name`, COUNT(c.`id_lang`) AS total
-				FROM `'._DB_PREFIX_.'orders` o
-				LEFT JOIN `'._DB_PREFIX_.'lang` c ON o.`id_lang` = c.`id_lang`
-				GROUP BY c.`id_lang`');
+				$sql = 'SELECT c.`name`, COUNT(c.`id_lang`) AS total
+						FROM `'._DB_PREFIX_.'orders` o
+						LEFT JOIN `'._DB_PREFIX_.'lang` c ON o.`id_lang` = c.`id_lang`
+						WHERE 1
+							'.Shop::addSqlRestriction(Shop::SHARE_ORDER, 'o').'
+						GROUP BY c.`id_lang`';
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
 				foreach ($result as $row)
 				{
-				    $this->_values[] = $row['total'];
-				    $this->_legend[] = $row['name'];
+					$this->_values[] = $row['total'];
+					$this->_legend[] = $row['name'];
 				}
-				break;
+			break;
 		}
 	}
 }

@@ -1,5 +1,3 @@
-/* CSS Document */
-
 body {
 	margin: 0;
 	padding: 0;
@@ -7,7 +5,8 @@ body {
 	font-size: 13px;
 	color: #333;
 	text-align: center;
-	background-image: url('../img/admin/bg_2.png');
+	background-image: url('../img/admin/bg-admin.jpg');
+	background-position: center center;
 }
 
 h1 {
@@ -19,15 +18,15 @@ h1 {
 }
 
 h2 a {
-	color: #dedede;
-	font-size: 7pt;
-	text-decoration: underline;
+	color: #eee;
+	font-size: 11px;
 	margin: 0;
+	text-shadow: 0 -1px 0 #000;
+	text-decoration:none;
 }
 
 h2 a:hover {
-	color: #dedede;
-	font-size: 7pt;
+	color: #eee;
 	text-decoration: underline;
 	margin: 0;
 }
@@ -45,61 +44,66 @@ a:hover {
 input, textarea, option, select {
 	color: #000;
 	font-family: Arial;
-	font-size: 12px;
+	font-size: 16px;
 	margin: 0;
 	padding: 0;
 }
 
 input:focus, textarea:focus {
-	border: 1px solid #686868;
-	background-color: #DFDFDF;
+	border: 1px solid #3293D6;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) inset;
 }
 
 /* CONTENT */
-
 #container {
 	width: 464px;
-	margin: 5em auto 1em auto;
+	margin: 12% auto 1em;
 	padding: 0;
 }
 
 #login {
-	height: 313px;
-	background: url('../img/admin/bg_login.gif') no-repeat top center;
 	color: #383838;
 	text-align: left;
 	font-weight: bold;
+	background-color:#F5F5F5;
+	border-radius:9px;
+	box-shadow: 0 1px 30px #333333;
 }
 
+#login h1 {
+	border-bottom:1px solid #ccc;
+	color:#333;
+	text-shadow:0 1px 0 #fff;
+}
+
+#login a { color:#3A6EA7; }
+#login label { text-shadow: 0 1px 0 #fff; }
 #login form {
+	border-top:1px solid #fff;
 	margin: 0;
-	padding: 40px 30px 25px 30px;
+	padding: 30px;
 }
 
-#login #submit {
+#login .submit {
 	margin: 1em 1px;
 	padding: 0;
 	display: block;
+	float:left;
 }
 
-#login #submit input {
-	padding: 2px 4px;
-	_padding: 0;
-}
-
-#login #lost {
-	
-	font-size: 0.95em;
+#login .submit input {
+	padding: 4px 10px;
 }
 
 /* ERROR */
-
 .error, #error {
-	margin: 0 30px 15px 30px;
+	margin: 0;
 	padding: 10px 15px;
 	border: 1px solid #EC9B9B;
 	background-color: #FAE2E3;
 	text-align: left;
+	border-radius:9px;
+	box-shadow: 0 1px 30px #333333;
 }
 
 #error ol {
@@ -109,38 +113,63 @@ input:focus, textarea:focus {
 
 #error li {
 	_margin-left: 45px;
-	font-family: Arial;
-	font-size: 11px;
+	font-family: Georgia;
+	font-size: 13px;
+	font-style: italic;
 }
 
 #error h3 {
-	margin: 0 0 .83em 0;
-	padding: 5px 0 0 30px;
-	background: url(../img/admin/error.png) no-repeat 0 0;
-	font-size: 1em;
+	margin: 0;
+	padding: 5px 0 12px 30px;
+	background: url(../img/admin/icon-cancel.png) no-repeat 0 0;
+	font-size: 16px;
+	text-indent:14px;
 }
 
 /* CLASS */
 
 .input {
-	width: 260px;
-	margin-top: 2px;
-	padding: 2px 4px;
-	border: 1px solid #588216;
+	border:1px solid #ccc;
+	width: 365px;
+	margin:0;
+	padding: 6px 4px 6px 35px;
 }
 
+.email_field { background: #fff url(../img/admin/bg_form_email.png) no-repeat scroll 10px 8px; }
+.password_field { background: #fff url(../img/admin/bg_form_password.png) no-repeat scroll 10px 8px; }
+
 .button {
-	border: 1px solid #DFD5AF;
-	border-top: 1px solid #FFF6D3;
-	border-left: 1px solid #FFF6D3;
-	color: #268CCD;
-	background-color: #FFF6D3;
+	background: -moz-linear-gradient(center top , #F9F9F9, #E3E3E3) repeat scroll 0 0 transparent; 
+	background: -webkit-gradient(linear, center top ,center bottom, from(#F9F9F9), to(#E3E3E3)) repeat scroll 0 0 transparent;
+	border-color: #CCCCCC #BBBBBB #A0A0A0;
+	border-left: 1px solid #BBBBBB;
+	border-radius: 3px 3px 3px 3px;
+	border-right: 1px solid #BBBBBB;
+	border-style: solid;
+	border-width: 1px;
+	color: #000000;
+	margin: 0;
+	outline: medium none;
+	padding: 3px 8px;
 }
 
 .button:hover {
-	background-color: #F0EBD6;
+	border:1px solid #939393;
+	cursor:pointer;
 }
 
-.center {
-	text-align: center;
-}
+.clear { clear: both; }
+.hide { display: none; }
+.bold { font-weight: bold; }
+
+.field { margin-bottom: 20px; }
+
+.fl { float: left; }
+.fr { float: right; }
+
+.no-margin { margin: 0; }
+.margin-right-5 { margin-right: 5px; }
+
+.padding-30 { padding: 30px; }
+
+.center { text-align: center; }

@@ -21,8 +21,8 @@ needs please refer to http://www.prestashop.com for more information.
 @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 International Registered Trademark & Property of PrestaShop SA
 
-NAME: Prestashop 1.4.9.0
-VERSION: 1.4.9.0
+NAME: Prestashop 1.5.3.1
+VERSION: 1.5.3.1
 
 PREPARATION
 ===========
@@ -45,7 +45,7 @@ Merci de vous rendre sur notre forum pour trouver les paramètres de pré-instal
 Topic français sur notre forum officiel :
 	http://www.prestashop.com/forums/viewthread/446/installation_configuration_et_mise_a_jour/preinstallation_settings_php_5_htaccess_for_certain_hosting_services
 
-Si vous ne trouvez pas de solution pour lancer l'installateur, merci de vous rendre à cette adresse :
+Si vous ne trouvez pas de solution pour lancer l'installateur, merci de vous rendre à cette adresse:
 	http://www.prestashop.com/forums/viewforum/7/installation_configuration___upgrade
 
 Il ya toujours des solutions pour vos questions ;-)

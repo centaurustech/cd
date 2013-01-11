@@ -19,32 +19,42 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14009 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-function checkLangPack(){
-	$('p#resultCheckLangPack').hide();
+function checkLangPack(token){
 	if ($('#iso_code').val().length == 2)
 	{
-		$.ajax(
-		{
-			url: "ajax_lang_packs.php",
-			cache: false,
-			data: {iso_lang:$('#iso_code').val(), ps_version:$('#ps_version').val()},
-			dataType : 'json',
-			success: function(ret)
+		$('#lang_pack_loading').show();
+		$('#lang_pack_msg').hide();
+		doAdminAjax(
 			{
-				if(typeof ret == 'object')
-					$('p#resultCheckLangPack').html(langPackOk+' <b>'+ret.name+'</b>) :'+'<br />'+langPackVersion+''+ret.version+' <a href="http://www.prestashop.com/download/lang_packs/gzip/'+ret.version+'/'+$('#iso_code').val()+'.gzip" target="_blank" class="link">'+download+'</a><br />'+langPackInfo).show("slow");
-				else if (ret == "offline")
-					$('p#resultCheckLangPack').show('slow');
+				controller:'AdminLanguages',
+				action:'checkLangPack',
+				token:token,
+				ajax:1,
+				iso_lang:$('#iso_code').val(), 
+				ps_version:$('#ps_version').val()
+			},
+			function(ret)
+			{
+				$('#lang_pack_loading').hide();
+				ret = $.parseJSON(ret);
+				if( ret.status == 'ok')
+				{
+					content = $.parseJSON(ret.content);
+					message = langPackOk + ' <b>'+content['name'] + '</b>) :'
+						+'<br />' + langPackVersion + ' ' + content['version']
+						+ ' <a href="http://www.prestashop.com/download/lang_packs/gzip/' + content['version'] + '/'
+						+ $('#iso_code').val()+'.gzip" target="_blank" class="link">'+download+'</a><br />' + langPackInfo;
+					$('#lang_pack_msg').html(message);
+					$('#lang_pack_msg').show();
+				}
+				else
+					showErrorMessage(ret.error);
 			}
-		 });
+		 );
 	 }
 }
 
-$(document).ready(function() {
-	$('p#resultCheckLangPack').hide();
-});

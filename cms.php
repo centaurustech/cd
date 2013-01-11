@@ -20,10 +20,18 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14007 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
+/**
+ * This file will be removed in 1.6
+ * You have to use index.php?controller=page_name instead of this page
+ *
+ * @deprecated 1.5.0
+ */
+
 require(dirname(__FILE__).'/config/config.inc.php');
-ControllerFactory::getController('CMSController')->run();
+Tools::displayFileAsDeprecated();
+
+Tools::redirect('index.php?controller=cms'.($_REQUEST ? '&'.http_build_query($_REQUEST, '', '&') : ''), __PS_BASE_URI__, null, 'HTTP/1.1 301 Moved Permanently');

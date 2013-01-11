@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16480 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,24 +27,31 @@
 class FeatureValueCore extends ObjectModel
 {
 	/** @var integer Group id which attribute belongs */
-	public		$id_feature;
-	
-	/** @var mixed Name */
-	public 		$value;
-	
+	public $id_feature;
+
+	/** @var string Name */
+	public $value;
+
 	/** @var boolean Custom */
-	public 		$custom = 0;
-	
- 	protected 	$fieldsRequired = array('id_feature');
-	protected 	$fieldsValidate = array('id_feature' => 'isUnsignedId', 'custom' => 'isBool');
- 	protected 	$fieldsRequiredLang = array('value');
- 	protected 	$fieldsSizeLang = array('value' => 255);
- 	protected 	$fieldsValidateLang = array('value' => 'isGenericName');
-		
-	protected 	$table = 'feature_value';
-	protected 	$identifier = 'id_feature_value';
-	
-	protected	$webserviceParameters = array(
+	public $custom = 0;
+
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'feature_value',
+		'primary' => 'id_feature_value',
+		'multilang' => true,
+		'fields' => array(
+			'id_feature' => array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'custom' => 	array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+
+			// Lang fields
+			'value' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 255),
+		),
+	);
+
+	protected $webserviceParameters = array(
 		'objectsNodeName' => 'product_feature_values',
 		'objectNodeName' => 'product_feature_value',
 		'fields' => array(
@@ -53,27 +59,6 @@ class FeatureValueCore extends ObjectModel
 		),
 	);
 
-	public function getFields()
-	{
-		parent::validateFields();
-
-		$fields['id_feature'] = (int)$this->id_feature;
-		$fields['custom'] = (int)$this->custom;
-
-		return $fields;
-	}
-	
-	/**
-	* Check then return multilingual fields for database interaction
-	*
-	* @return array Multilingual fields
-	*/
-	public function getTranslationsFieldsChild()
-	{
-		parent::validateFieldsLang();
-		return parent::getTranslationsFields(array('value'));
-	}
-	
 	/**
 	 * Get all values for a given feature
 	 *
@@ -83,12 +68,13 @@ class FeatureValueCore extends ObjectModel
 	 */
 	public static function getFeatureValues($id_feature)
 	{
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-		SELECT *
-		FROM `'._DB_PREFIX_.'feature_value`
-		WHERE `id_feature` = '.(int)$id_feature);
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+			SELECT *
+			FROM `'._DB_PREFIX_.'feature_value`
+			WHERE `id_feature` = '.(int)$id_feature
+		);
 	}
-	
+
 	/**
 	 * Get all values for a given feature and language
 	 *
@@ -97,14 +83,17 @@ class FeatureValueCore extends ObjectModel
 	 * @return array Array with feature's values
 	 * @static
 	 */
-	public static function getFeatureValuesWithLang($id_lang, $id_feature)
+	public static function getFeatureValuesWithLang($id_lang, $id_feature, $custom = false)
 	{
-		return Db::getInstance()->ExecuteS('
-		SELECT *
-		FROM `'._DB_PREFIX_.'feature_value` v
-		LEFT JOIN `'._DB_PREFIX_.'feature_value_lang` vl ON (v.`id_feature_value` = vl.`id_feature_value` AND vl.`id_lang` = '.(int)$id_lang.')
-		WHERE v.`id_feature` = '.(int)$id_feature.' AND (v.`custom` IS NULL OR v.`custom` = 0)
-		ORDER BY vl.`value` ASC');
+		return Db::getInstance()->executeS('
+			SELECT *
+			FROM `'._DB_PREFIX_.'feature_value` v
+			LEFT JOIN `'._DB_PREFIX_.'feature_value_lang` vl
+				ON (v.`id_feature_value` = vl.`id_feature_value` AND vl.`id_lang` = '.(int)$id_lang.')
+			WHERE v.`id_feature` = '.(int)$id_feature.'
+				'.(!$custom ? 'AND (v.`custom` IS NULL OR v.`custom` = 0)' : '').'
+			ORDER BY vl.`value` ASC
+		');
 	}
 
 	/**
@@ -116,13 +105,14 @@ class FeatureValueCore extends ObjectModel
 	 */
 	public static function getFeatureValueLang($id_feature_value)
 	{
-		return Db::getInstance()->ExecuteS('
-		SELECT *
-		FROM `'._DB_PREFIX_.'feature_value_lang`
-		WHERE `id_feature_value` = '.(int)$id_feature_value.'
-		ORDER BY `id_lang`');
+		return Db::getInstance()->executeS('
+			SELECT *
+			FROM `'._DB_PREFIX_.'feature_value_lang`
+			WHERE `id_feature_value` = '.(int)$id_feature_value.'
+			ORDER BY `id_lang`
+		');
 	}
-	
+
 	/**
 	 * Select the good lang in tab
 	 *
@@ -137,32 +127,33 @@ class FeatureValueCore extends ObjectModel
 			if ($tab['id_lang'] == $id_lang)
 				return $tab['value'];
 	}
-	
+
 	public static function addFeatureValueImport($id_feature, $name)
 	{
-		$rq = Db::getInstance()->ExecuteS('
-		SELECT fv.`id_feature_value`
-		FROM '._DB_PREFIX_.'feature_value fv
-		LEFT JOIN '._DB_PREFIX_.'feature_value_lang fvl ON (fvl.`id_feature_value` = fv.`id_feature_value`)
-		WHERE `value` = \''.pSQL($name).'\'
-		AND fv.`id_feature` = '.(int)$id_feature.'
-		AND fv.`custom` = 0
-		GROUP BY fv.`id_feature_value` LIMIT 1');
+		$rq = Db::getInstance()->executeS('
+			SELECT fv.`id_feature_value`
+			FROM '._DB_PREFIX_.'feature_value fv
+			LEFT JOIN '._DB_PREFIX_.'feature_value_lang fvl
+				ON (fvl.`id_feature_value` = fv.`id_feature_value`)
+			WHERE `value` = \''.pSQL($name).'\'
+				AND fv.`id_feature` = '.(int)$id_feature.'
+			GROUP BY fv.`id_feature_value` LIMIT 1
+		');
 
-		if (!isset($rq[0]['id_feature_value']) OR !$id_feature_value = (int)$rq[0]['id_feature_value'])
+		if (!isset($rq[0]['id_feature_value']) || !$id_feature_value = (int)$rq[0]['id_feature_value'])
 		{
 			// Feature doesn't exist, create it
-			$featureValue = new FeatureValue();
-			
+			$feature_value = new FeatureValue();
+
 			$languages = Language::getLanguages();
-			foreach ($languages AS $language)
-				$featureValue->value[$language['id_lang']] = strval($name);
+			foreach ($languages as $language)
+				$feature_value->value[$language['id_lang']] = strval($name);
 
-			$featureValue->id_feature = (int)$id_feature;
-			$featureValue->custom = 1;
-			$featureValue->add();
+			$feature_value->id_feature = (int)$id_feature;
+			$feature_value->custom = 1;
+			$feature_value->add();
 
-			return (int)$featureValue->id;
+			return (int)$feature_value->id;
 		}
 		return (int)$id_feature_value;
 	}
@@ -171,18 +162,21 @@ class FeatureValueCore extends ObjectModel
 	{
 		$return = parent::add($autodate, $nullValues);
 		if ($return)
-			Module::hookExec('afterSaveFeatureValue', array('id_feature_value' => $this->id));
+			Hook::exec('actionFeatureValueSave', array('id_feature_value' => $this->id));
 		return $return;
 	}
 
 	public function delete()
 	{
 		/* Also delete related products */
-		Db::getInstance()->Execute('DELETE FROM `'._DB_PREFIX_.'feature_product` WHERE `id_feature_value` = '.(int)$this->id);
+		Db::getInstance()->execute('
+			DELETE FROM `'._DB_PREFIX_.'feature_product`
+			WHERE `id_feature_value` = '.(int)$this->id
+		);
 		$return = parent::delete();
-		
+
 		if ($return)
-			Module::hookExec('afterDeleteFeatureValue', array('id_feature_value' => $this->id));
+			Hook::exec('actionFeatureValueDelete', array('id_feature_value' => $this->id));
 		return $return;
 	}
 
@@ -190,7 +184,7 @@ class FeatureValueCore extends ObjectModel
 	{
 		$return = parent::update($nullValues);
 		if ($return)
-			Module::hookExec('afterSaveFeatureValue', array('id_feature_value' => $this->id));
+			Hook::exec('actionFeatureValueSave', array('id_feature_value' => $this->id));
 		return $return;
 	}
 }

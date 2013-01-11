@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -66,30 +65,26 @@ class Blockrss extends Module
 		if (Tools::isSubmit('submitBlockRss'))
 		{
 			$errors = array();
-			$urlfeed = strval(Tools::getValue('urlfeed'));
-			$title = strval(Tools::getValue('title'));
-			$nbr = (int)(Tools::getValue('nbr'));
+			$urlfeed = Tools::getValue('urlfeed');
+			$title = Tools::getValue('title');
+			$nbr = (int)Tools::getValue('nbr');
 
-			if ($urlfeed AND !Validate::isUrl($urlfeed))
+			if ($urlfeed AND !Validate::isAbsoluteUrl($urlfeed))
 				$errors[] = $this->l('Invalid feed URL');
 			elseif (!$title OR empty($title) OR !Validate::isGenericName($title))
 				$errors[] = $this->l('Invalid title');
 			elseif (!$nbr OR $nbr <= 0 OR !Validate::isInt($nbr))
-				$errors[] = $this->l('Invalid number of feeds');
+				$errors[] = $this->l('Invalid number of feeds');				
 			elseif (stristr($urlfeed, $_SERVER['HTTP_HOST'].__PS_BASE_URI__))
 				$errors[] = $this->l('You have selected a feed URL on your own website. Please choose another URL');
-			elseif (!($contents = @file_get_contents($urlfeed)))
+			elseif (!($contents = Tools::file_get_contents($urlfeed)))
 				$errors[] = $this->l('Feed is unreachable, check your URL');
 			/* Even if the feed was reachable, We need to make sure that the feed is well formated */
 			else
 			{
-				try
-				{	
+				try {	
 					$xmlFeed = new XML_Feed_Parser($contents);
-		
-				}
-				catch (XML_Feed_Parser_Exception $e)
-				{
+				} catch (XML_Feed_Parser_Exception $e) {
 					$errors[] = $this->l('Invalid feed:').' '.$e->getMessage();
 				}
 			}
@@ -103,7 +98,7 @@ class Blockrss extends Module
 				$output .= $this->displayConfirmation($this->l('Settings updated'));
 			}
 			else
-				$output .= $this->displayError(implode('<br />', $errors));				
+				$output .= $this->displayError(implode('<br />', $errors));
 		}
 		else
 		{
@@ -125,13 +120,13 @@ class Blockrss extends Module
 			<fieldset><legend><img src="'.$this->_path.'logo.gif" alt="" title="" />'.$this->l('Settings').'</legend>
 				<label>'.$this->l('Block title').'</label>
 				<div class="margin-form">
-					<input type="text" name="title" value="'.htmlentities(Tools::getValue('title', Configuration::get('RSS_FEED_TITLE'))).'" />
+					<input type="text" name="title" value="'.Tools::safeOutput(Tools::getValue('title', Configuration::get('RSS_FEED_TITLE'))).'" />
 					<p class="clear">'.$this->l('Create a title for the block (default: \'RSS feed\')').'</p>
 
 				</div>
 				<label>'.$this->l('Add a feed URL').'</label>
 				<div class="margin-form">
-					<input type="text" size="85" name="urlfeed" value="'.htmlentities(Tools::getValue('urlfeed', Configuration::get('RSS_FEED_URL'))).'" />
+					<input type="text" size="85" name="urlfeed" value="'.Tools::safeOutput(Tools::getValue('urlfeed', Configuration::get('RSS_FEED_URL'))).'" />
 					<p class="clear">'.$this->l('Add the URL of the feed you want to use (sample: http://news.google.com/?output=rss)').'</p>
 
 				</div>
@@ -149,30 +144,28 @@ class Blockrss extends Module
 
 	function hookLeftColumn($params)
 	{
-		global $smarty;
-		
 		// Conf
 		$title = strval(Configuration::get('RSS_FEED_TITLE'));
 		$url = strval(Configuration::get('RSS_FEED_URL'));
 		$nb = (int)(Configuration::get('RSS_FEED_NBR'));
-		
+
 		// Getting data
 		$rss_links = array();
 		if ($url && ($contents = @file_get_contents($url)))
 			try
-			{				
-				if (@$src = new XML_Feed_Parser($contents))
-					for ($i = 0; $i < ($nb ? $nb : 5); $i++)
-						if (@$item = $src->getEntryByOffset($i))
-							$rss_links[] = array('title' => $item->title, 'url' => $item->link);
+			{
+			if (@$src = new XML_Feed_Parser($contents))
+				for ($i = 0; $i < ($nb ? $nb : 5); $i++)
+					if (@$item = $src->getEntryByOffset($i))
+						$rss_links[] = array('title' => $item->title, 'url' => $item->link);
 			}
 			catch (XML_Feed_Parser_Exception $e)
 			{
-				Tools::dieOrLog(Tools::displayError('Error: invalid RSS feed in blockrss module').' '.$e->getMessage(), false);
+				Tools::dieOrLog(sprintf($this->l('Error: invalid RSS feed in "blockrss" module: %s'), $e->getMessage()), false);
 			}
-		
+
 		// Display smarty
-		$smarty->assign(array('title' => ($title ? $title : $this->l('RSS feed')), 'rss_links' => $rss_links));
+		$this->smarty->assign(array('title' => ($title ? $title : $this->l('RSS feed')), 'rss_links' => $rss_links));
 
  	 	return $this->display(__FILE__, 'blockrss.tpl');
  	}
@@ -184,6 +177,6 @@ class Blockrss extends Module
 	
 	function hookHeader($params)
 	{
-		Tools::addCSS(($this->_path).'blockrss.css', 'all');
+		$this->context->controller->addCSS(($this->_path).'blockrss.css', 'all');
 	}
 }

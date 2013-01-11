@@ -20,14 +20,13 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 if (!defined('_PS_VERSION_'))
 	exit;
-	
+
 class BlockCurrencies extends Module
 {
 	public function __construct()
@@ -39,14 +38,27 @@ class BlockCurrencies extends Module
 		$this->need_instance = 0;
 
 		parent::__construct();
-		
+
 		$this->displayName = $this->l('Currency block');
 		$this->description = $this->l('Adds a block for selecting a currency.');
 	}
 
 	public function install()
 	{
-		return (parent::install() AND $this->registerHook('top') AND $this->registerHook('header'));
+		return parent::install() && $this->registerHook('top') && $this->registerHook('header');
+	}
+
+	private function _prepareHook($params)
+	{
+		if (Configuration::get('PS_CATALOG_MODE'))
+			return false;
+
+		if (!count(Currency::getCurrencies()))
+			return false;
+
+		$this->smarty->assign('blockcurrencies_sign', $this->context->currency->sign);
+	
+		return true;
 	}
 
 	/**
@@ -57,22 +69,15 @@ class BlockCurrencies extends Module
 	*/
 	public function hookTop($params)
 	{
-		if (Configuration::get('PS_CATALOG_MODE'))
-			return ;
-	
-		global $smarty;
-		$currencies = Currency::getCurrencies();
-		if (!sizeof($currencies))
-			return '';
-		$smarty->assign('currencies', $currencies);
-		return $this->display(__FILE__, 'blockcurrencies.tpl');
+		if ($this->_prepareHook($params))
+			return $this->display(__FILE__, 'blockcurrencies.tpl');
 	}
-	
+
 	public function hookHeader($params)
 	{
 		if (Configuration::get('PS_CATALOG_MODE'))
-			return ;
-		Tools::addCSS(($this->_path).'blockcurrencies.css', 'all');
+			return;
+		$this->context->controller->addCSS(($this->_path).'blockcurrencies.css', 'all');
 	}
 }
 

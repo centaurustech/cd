@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14001 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -31,19 +30,39 @@ class TranslatedConfigurationCore extends Configuration
 		'objectNodeName' => 'translated_configuration',
 		'objectsNodeName' => 'translated_configurations',
 		'fields' => array(
-			'value' => array('i18n' => true),
-			'date_add' => array('i18n' => true),
-			'date_upd' => array('i18n' => true),
+			'value' => array(),
+			'date_add' => array(),
+			'date_upd' => array(),
 		),
 	);
-	
+
+	public static $definition = array(
+		'table' => 'configuration',
+		'primary' => 'id_configuration',
+		'multilang' => true,
+		'fields' => array(
+			'name' => 			array('type' => self::TYPE_STRING, 'validate' => 'isConfigName', 'required' => true, 'size' => 32),
+			'id_shop_group' => 	array('type' => self::TYPE_NOTHING, 'validate' => 'isUnsignedId'),
+			'id_shop' => 		array('type' => self::TYPE_NOTHING, 'validate' => 'isUnsignedId'),
+			'value' => 			array('type' => self::TYPE_STRING, 'lang' => true),
+			'date_add' => 		array('type' => self::TYPE_DATE, 'validate' => 'isDate'),
+			'date_upd' => 		array('type' => self::TYPE_DATE, 'validate' => 'isDate'),
+		),
+	);
+
 	public function __construct($id = NULL, $id_lang = NULL)
 	{
+		$this->def = ObjectModel::getDefinition($this);
 		// Check if the id configuration is set in the configuration_lang table.
 		// Otherwise configuration is not set as translated configuration.
 		if ($id !== null)
 		{
-			$id_translated = Db::getInstance()->ExecuteS('SELECT `'.$this->identifier.'` FROM `'.pSQL(_DB_PREFIX_.$this->table).'_lang` WHERE `'.$this->identifier.'`='.pSQL($id).' LIMIT 0,1');
+			$id_translated = Db::getInstance()->executeS('
+				SELECT `'.$this->def['primary'].'`
+				FROM `'.pSQL(_DB_PREFIX_.$this->def['table']).'_lang`
+				WHERE `'.$this->def['primary'].'`='.pSQL($id).' LIMIT 0,1
+			');
+
 			if (empty($id_translated))
 				$id = null;
 		}
@@ -81,15 +100,15 @@ class TranslatedConfigurationCore extends Configuration
 	public function getWebserviceObjectList($sql_join, $sql_filter, $sql_sort, $sql_limit)
 	{
 		$query = '
-		SELECT DISTINCT main.`'.$this->identifier.'` FROM `'._DB_PREFIX_.$this->table.'` main
+		SELECT DISTINCT main.`'.$this->def['primary'].'` FROM `'._DB_PREFIX_.$this->def['table'].'` main
 		'.$sql_join.'
 		WHERE id_configuration IN 
 		(	SELECT id_configuration
-			FROM '._DB_PREFIX_.$this->table.'_lang
+			FROM '._DB_PREFIX_.$this->def['table'].'_lang
 		) '.$sql_filter.'
 		'.($sql_sort != '' ? $sql_sort : '').'
 		'.($sql_limit != '' ? $sql_limit : '').'
 		';
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS($query);
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($query);
 	}
 }

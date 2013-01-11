@@ -6,7 +6,7 @@
 	<taxes>
 		<tax id="1" name="VAT UK 20%" rate="20.0"/>
 		<tax id="2" name="VAT UK 5%" rate="5"/>
-
+		
 		<taxRulesGroup name="UK Standard Rate (20%)">
 			<taxRule iso_code_country="be" id_tax="1"/>
 			<taxRule iso_code_country="bg" id_tax="1"/>

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,12 +29,12 @@ if ( isset($_POST['ajax_blockcart_display']) || isset($_GET['ajax_blockcart_disp
 {
 	if (Tools::getValue('ajax_blockcart_display') == 'collapse')
 	{
-		$cookie->ajax_blockcart_display = 'collapsed';
+		Context::getContext()->cookie->ajax_blockcart_display = 'collapsed';
 		die ('collapse status of the blockcart module updated in the cookie');
 	}
 	if (Tools::getValue('ajax_blockcart_display') == 'expand')
 	{
-		$cookie->ajax_blockcart_display = 'expanded';
+		Context::getContext()->cookie->ajax_blockcart_display = 'expanded';
 		die ('expand status of the blockcart module updated in the cookie');
 	}
 	die ('ERROR : bad status setted. Only collapse or expand status of the blockcart module are available.');

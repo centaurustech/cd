@@ -19,7 +19,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14009 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -39,7 +38,7 @@ function verifyMail(testMsg, testSubject)
 		return false;
 	}
 	else if (!verifMailREGEX.test( $("#testEmail").val() ))
-	{ 
+	{
 		$("#mailResultCheck").addClass("fail").removeClass("ok").removeClass('userInfos').html(errorMail);
 		return false;
 	}
@@ -48,19 +47,24 @@ function verifyMail(testMsg, testSubject)
 		//external verifications and sets
 		$.ajax(
 		{
-		   url: "ajax_send_mail_test.php",
+		   url: "index.php",
 		   cache: false,
 		   type : "POST",
 		   data:
-		   {	"mailMethod" 	: (($("input#PS_MAIL_METHOD").val() == 2) ? "smtp" : "native"),
-				"smtpSrv"   	: $("input#PS_MAIL_SERVER").val(),
-				"testEmail" 	: $("#testEmail").val(),
-		   		"smtpLogin" 	: $("input#PS_MAIL_USER").val(),
-		   		"smtpPassword" 	: $("input#PS_MAIL_PASSWD").val(),
-				"smtpPort" 		: $("input#PS_MAIL_SMTP_PORT").val(),
-				"smtpEnc" 		: $("select#PS_MAIL_SMTP_ENCRYPTION").val(),
-				"testMsg" 		: textMsg,
-				"testSubject" 	: textSubject
+			{
+				"mailMethod"	: (($("input[name=PS_MAIL_METHOD]:checked").val() == 2) ? "smtp" : "native"),
+				"smtpSrv"		: $("input[name=PS_MAIL_SERVER]").val(),
+				"testEmail"		: $("#testEmail").val(),
+				"smtpLogin"		: $("input[name=PS_MAIL_USER]").val(),
+				"smtpPassword"	: $("input[name=PS_MAIL_PASSWD]").val(),
+				"smtpPort"		: $("input[name=PS_MAIL_SMTP_PORT]").val(),
+				"smtpEnc"		: $("select[name=PS_MAIL_SMTP_ENCRYPTION]").val(),
+				"testMsg"		: textMsg,
+				"testSubject"	: textSubject,
+				"token"			: token_mail,
+				"ajax"			: 1,
+				"tab"				: 'AdminEmails',
+				"action"			: 'sendMailTest'
 			},
 		   success: function(ret)
 		   {

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -36,7 +35,7 @@ class Feeder extends Module
 	{
 		$this->name = 'feeder';
 		$this->tab = 'front_office_features';
-		$this->version = 0.2;
+		$this->version = 0.3;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 		
@@ -49,53 +48,33 @@ class Feeder extends Module
 	
 	function install()
 	{
-		if (!parent::install())
-			return false;
-		if (!$this->registerHook('header'))
-			return false;
-		return true;
+		return (parent::install() && $this->registerHook('header'));
 	}
 	
 	function hookHeader($params)
 	{
-		global $smarty, $cookie;
 		
-		$id_category = (int)(Tools::getValue('id_category'));
-		if (!$id_category)
+		if (!($id_category = (int)Tools::getValue('id_category')))
 		{
-			if (isset($_SERVER['HTTP_REFERER']) AND preg_match('!^(.*)\/([0-9]+)\-(.*[^\.])|(.*)id_category=([0-9]+)(.*)$!', $_SERVER['HTTP_REFERER'], $regs) AND !strstr($_SERVER['HTTP_REFERER'], '.html'))
+			if (isset($_SERVER['HTTP_REFERER']) && preg_match('!^(.*)\/([0-9]+)\-(.*[^\.])|(.*)id_category=([0-9]+)(.*)$!', $_SERVER['HTTP_REFERER'], $regs) && !strstr($_SERVER['HTTP_REFERER'], '.html'))
 			{
-				if (isset($regs[2]) AND is_numeric($regs[2]))
+				if (isset($regs[2]) && is_numeric($regs[2]))
 					$id_category = (int)($regs[2]);
-				elseif (isset($regs[5]) AND is_numeric($regs[5]))
-					$id_category = (int)($regs[5]);
+				elseif (isset($regs[5]) && is_numeric($regs[5]))
+					$id_category = (int)$regs[5];
 			}
-			elseif ($id_product = (int)(Tools::getValue('id_product')))
+			elseif ($id_product = (int)Tools::getValue('id_product'))
 			{
 				$product = new Product($id_product);
 				$id_category = $product->id_category_default;
 			}
 		}
-		$category = new Category($id_category);
+
 		$orderBy = Tools::getProductsOrder('by', Tools::getValue('orderby'));
 		$orderWay = Tools::getProductsOrder('way', Tools::getValue('orderway'));
-		$smarty->assign(array(
+		$this->smarty->assign(array(
 			'feedUrl' => Tools::getShopDomain(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/rss.php?id_category='.$id_category.'&amp;orderby='.$orderBy.'&amp;orderway='.$orderWay,
 		));
 		return $this->display(__FILE__, 'feederHeader.tpl');
-	}
-
-	public function getContent()
-	{
-		/* display the module name */
-		$this->_html = '<h2>'.$this->displayName.'</h2><br />';
-		$this->_html .= $this->l('Url for example:').'<br />';
-
-		$orderBy = Tools::getProductsOrder('by');
-		$orderWay = Tools::getProductsOrder('way');
-		$this->_html .= Tools::getShopDomain(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/rss.php?id_category=<span style="color:red;">{id_category}</span>&amp;orderby='.$orderBy.'&amp;orderway='.$orderWay;
-		$this->_html .= '<br /><br />'.$this->l('Replace').' <span style="color:red;">{id_category}</span> '.$this->l('by the id category current or "0"');
-
-		return $this->_html;
 	}
 }

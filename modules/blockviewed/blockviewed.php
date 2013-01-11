@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,7 +32,7 @@ class BlockViewed extends Module
 	private $_html = '';
 	private $_postErrors = array();
 
-	function __construct()
+	public function __construct()
 	{
 		$this->name = 'blockviewed';
 		$this->tab = 'front_office_features';
@@ -47,7 +46,7 @@ class BlockViewed extends Module
 		$this->description = $this->l('Adds a block displaying last-viewed products.');
 	}
 
-	function install()
+	public function install()
 	{
 		if (!parent::install()
 			OR !$this->registerHook('leftColumn')
@@ -62,14 +61,14 @@ class BlockViewed extends Module
 		$output = '<h2>'.$this->displayName.'</h2>';
 		if (Tools::isSubmit('submitBlockViewed'))
 		{
-			if (!$productNbr = Tools::getValue('productNbr') OR empty($productNbr))
+			if (!($productNbr = Tools::getValue('productNbr')) || empty($productNbr))
 				$output .= '<div class="alert error">'.$this->l('You must fill in the \'Products displayed\' field.').'</div>';
 			elseif ((int)($productNbr) == 0)
 				$output .= '<div class="alert error">'.$this->l('Invalid number.').'</div>';
 			else
 			{
-				Configuration::updateValue('PRODUCTS_VIEWED_NBR', (int)($productNbr));
-				$output .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.$this->l('Settings updated').'</div>';
+				Configuration::updateValue('PRODUCTS_VIEWED_NBR', (int)$productNbr);
+				$output .= '<div class="conf confirm">'.$this->l('Settings updated').'</div>';
 			}
 		}
 		return $output.$this->displayForm();
@@ -91,26 +90,27 @@ class BlockViewed extends Module
 		return $output;
 	}
 
-	function hookRightColumn($params)
+	public function hookRightColumn($params)
 	{
-		global $link, $smarty, $cookie;
-
-		$id_product = (int)(Tools::getValue('id_product'));
-		$productsViewed = (isset($params['cookie']->viewed) AND !empty($params['cookie']->viewed)) ? array_slice(explode(',', $params['cookie']->viewed), 0, Configuration::get('PRODUCTS_VIEWED_NBR')) : array();
+		$id_product = (int)Tools::getValue('id_product');
+		$productsViewed = (isset($params['cookie']->viewed) && !empty($params['cookie']->viewed)) ? array_slice(explode(',', $params['cookie']->viewed), 0, Configuration::get('PRODUCTS_VIEWED_NBR')) : array();
 
 		if (sizeof($productsViewed))
 		{
 			$defaultCover = Language::getIsoById($params['cookie']->id_lang).'-default';
 
 			$productIds = implode(',', $productsViewed);
-			$productsImages = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-			SELECT i.id_image, p.id_product, il.legend, p.active, pl.name, pl.description_short, pl.link_rewrite, cl.link_rewrite AS category_rewrite
+			$productsImages = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+			SELECT image_shop.id_image, p.id_product, il.legend, product_shop.active, pl.name, pl.description_short, pl.link_rewrite, cl.link_rewrite AS category_rewrite
 			FROM '._DB_PREFIX_.'product p
-			LEFT JOIN '._DB_PREFIX_.'product_lang pl ON (pl.id_product = p.id_product)
-			LEFT JOIN '._DB_PREFIX_.'image i ON (i.id_product = p.id_product AND i.cover = 1)
+			LEFT JOIN '._DB_PREFIX_.'product_lang pl ON (pl.id_product = p.id_product'.Shop::addSqlRestrictionOnLang('pl').')
+			LEFT JOIN '._DB_PREFIX_.'image i ON (i.id_product = p.id_product AND i.cover = 1)'.
+				Shop::addSqlAssociation('image', 'i', false, 'image_shop.cover=1').'
 			LEFT JOIN '._DB_PREFIX_.'image_lang il ON (il.id_image = i.id_image)
-			LEFT JOIN '._DB_PREFIX_.'category_lang cl ON (cl.id_category = p.id_category_default)
+			'.Shop::addSqlAssociation('product', 'p').'
+			LEFT JOIN '._DB_PREFIX_.'category_lang cl ON (cl.id_category = product_shop.id_category_default'.Shop::addSqlRestrictionOnLang('cl').')
 			WHERE p.id_product IN ('.$productIds.')
+			AND (i.id_image IS NULL OR image_shop.id_shop='.(int)$this->context->shop->id.')
 			AND pl.id_lang = '.(int)($params['cookie']->id_lang).'
 			AND cl.id_lang = '.(int)($params['cookie']->id_lang)
 			);
@@ -128,12 +128,15 @@ class BlockViewed extends Module
 				else
 				{
 					$obj->id = (int)($productsImagesArray[$productViewed]['id_product']);
+					$obj->id_image = (int)$productsImagesArray[$productViewed]['id_image'];
 					$obj->cover = (int)($productsImagesArray[$productViewed]['id_product']).'-'.(int)($productsImagesArray[$productViewed]['id_image']);
 					$obj->legend = $productsImagesArray[$productViewed]['legend'];
 					$obj->name = $productsImagesArray[$productViewed]['name'];
 					$obj->description_short = $productsImagesArray[$productViewed]['description_short'];
 					$obj->link_rewrite = $productsImagesArray[$productViewed]['link_rewrite'];
 					$obj->category_rewrite = $productsImagesArray[$productViewed]['category_rewrite'];
+					// $obj is not a real product so it cannot be used as argument for getProductLink()
+					$obj->product_link = $this->context->link->getProductLink($obj->id, $obj->link_rewrite, $obj->category_rewrite);
 
 					if (!isset($obj->cover) || !$productsImagesArray[$productViewed]['id_image'])
 					{
@@ -154,7 +157,7 @@ class BlockViewed extends Module
 				LEFT JOIN `'._DB_PREFIX_.'category_group` cg ON (cg.`id_category` = cp.`id_category`)
 				LEFT JOIN `'._DB_PREFIX_.'customer_group` cug ON (cug.`id_group` = cg.`id_group`)
 				WHERE p.`id_product` = '.(int)($id_product).'
-				'.($cookie->id_customer ? 'AND cug.`id_customer` = '.(int)($cookie->id_customer) : 
+				'.($this->context->customer->id ? 'AND cug.`id_customer` = '.(int)$this->context->customer->id :
 				'AND cg.`id_group` = 1')
 				);
 				if ($result['total'])
@@ -168,7 +171,7 @@ class BlockViewed extends Module
 			if (!sizeof($productsViewedObj))
 				return ;
 
-			$smarty->assign(array(
+			$this->smarty->assign(array(
 				'productsViewedObj' => $productsViewedObj,
 				'mediumSize' => Image::getSize('medium')));
 
@@ -179,13 +182,13 @@ class BlockViewed extends Module
 		return ;
 	}
 
-	function hookLeftColumn($params)
+	public function hookLeftColumn($params)
 	{
 		return $this->hookRightColumn($params);
 	}
 
-	function hookHeader($params)
+	public function hookHeader($params)
 	{
-		Tools::addCSS(($this->_path).'blockviewed.css', 'all');
+		$this->context->controller->addCSS(($this->_path).'blockviewed.css', 'all');
 	}
 }

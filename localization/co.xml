@@ -8,7 +8,7 @@
 	</languages>
 	<taxes>
 		<tax id="1" name="IVA CO 16%" rate="16" />
-
+		
 		<taxRulesGroup name="CO Standard Rate (16%)">
 			<taxRule iso_code_country="co" id_tax="1" />
 		</taxRulesGroup>
@@ -56,4 +56,3 @@
 		<state name="Vichada" iso_code="VID" zone="South America" country="CO"/>
 	</states>
 </localizationPack>
-

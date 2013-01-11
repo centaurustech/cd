@@ -2,7 +2,7 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>Message from {shop_name}</title>
+	<title>Mensaje de {shop_name}</title>
 </head>
 <body>
 	<table style="font-family: Verdana,sans-serif; font-size: 11px; color: #374953; width: 550px;">
@@ -14,25 +14,39 @@
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td style="background-color: #db3484; color: #fff; font-size: 12px; font-weight: bold; padding: 0.5em 1em;" align="left">Your message has been correctly sent to our Customer Service.</td>
+<td style="background-color: {color}; color: #fff; font-size: 12px; font-weight: bold; padding: 0.5em 1em;" align="left">SU mensaje se envio correctamente al centro de atenci&oacute;n de cliente.</td>
 </tr>
 <tr>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td align="left">Your message: {message}</td>
+<td align="left">
+<table>
+<tbody>
+<tr>
+<td align="left">Su mensaje se envio correctamente<br />Mensaje: {message}<br /><br />Order ID : {id_order}<br /><br />Archivo : {attached_file}</td>
 </tr>
 <tr>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td style="background-color: #db3484; color: #fff; font-size: 12px; font-weight: bold; padding: 0.5em 1em;" align="left">We will answer as soon as possible.</td>
+<td align="left">Responderemos a la brevedad</td>
+</tr>
+</tbody>
+</table>
+</td>
 </tr>
 <tr>
 <td>&nbsp;</td>
 </tr>
 <tr>
-<td style="font-size: 10px; border-top: 1px solid #D9DADE;" align="center"><a style="color: #db3484; font-weight: bold; text-decoration: none;" href="{shop_url}">{shop_name}</a> powered with <a style="text-decoration: none; color: #374953;" href="http://www.prestashop.com/">PrestaShop&trade;</a></td>
+<td style="background-color: {color}; color: #fff; font-size: 12px; font-weight: bold; padding: 0.5em 1em;" align="left">Responderemos a la brevedad</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td style="font-size: 10px; border-top: 1px solid #D9DADE;" align="center"><a style="color: {color}; font-weight: bold; text-decoration: none;" href="{shop_url}">{shop_name}</a> powered with <a style="text-decoration: none; color: #374953;" href="http://www.prestashop.com/">PrestaShop&trade;</a></td>
 </tr>
 </tbody>
 </table>

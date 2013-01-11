@@ -19,7 +19,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,6 +29,14 @@ function getCommentForm()
 		return (document.forms['comment_form']);
 	else
 		return (document.comment_form);
+}
+
+function getCommentDeleteForm()
+{
+	if (document.forms)
+		return (document.forms['delete_comment_form']);
+	else
+		return (document.delete_comment_form);
 }
 
 function acceptComment(id)
@@ -49,6 +56,19 @@ function deleteComment(id)
 		form.elements['id_product_comment'].value = id;
 	form.elements['action'].value = 'delete';
 	form.submit();
+}
+
+function delComment(id, confirmation)
+{
+	var answer = confirm(confirmation);
+	if (answer)
+	{
+		var form = getCommentDeleteForm();
+		if (id)
+			form.elements['delete_id_product_comment'].value = id;
+		form.elements['delete_action'].value = 'delete';
+		form.submit();
+	}
 }
 
 function getCriterionForm()

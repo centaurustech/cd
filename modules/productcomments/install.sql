@@ -51,3 +51,25 @@ CREATE TABLE IF NOT EXISTS `PREFIX_product_comment_grade` (
   PRIMARY KEY (`id_product_comment`, `id_product_comment_criterion`),
   KEY `id_product_comment_criterion` (`id_product_comment_criterion`)
 ) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `PREFIX_product_comment_usefulness` (
+  `id_product_comment` int(10) unsigned NOT NULL,
+  `id_customer` int(10) unsigned NOT NULL,
+  `usefulness` tinyint(1) unsigned NOT NULL,
+  PRIMARY KEY (`id_product_comment`, `id_customer`)
+) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `PREFIX_product_comment_report` (
+  `id_product_comment` int(10) unsigned NOT NULL,
+  `id_customer` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id_product_comment`, `id_customer`)
+) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8;
+
+INSERT INTO `PREFIX_product_comment_criterion` VALUES ('1', '1', '1');
+
+INSERT INTO `PREFIX_product_comment_criterion_lang` (`id_product_comment_criterion`, `id_lang`, `name`)
+	(
+		SELECT '1', l.`id_lang`, 'Quality'
+		FROM `PREFIX_lang` l
+	);
+

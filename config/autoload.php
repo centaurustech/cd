@@ -20,41 +20,12 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16943 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-function __autoload($className)
-{
-	if (defined('SMARTY_SPL_AUTOLOAD') && smartyAutoload($className))
-		return true;
+// Include some alias functions
+require_once(dirname(__FILE__).'/alias.php');
+require_once(dirname(__FILE__).'/../classes/Autoload.php');
 
-	$className = str_replace(chr(0), '', $className);
-	$classDir = dirname(__FILE__).'/../classes/';
-	$overrideDir = dirname(__FILE__).'/../override/classes/';
-
-	// This is a Core class and its name is the same as its declared name
-	if (substr($className, -4) == 'Core')
-		require_once($classDir.substr($className, 0, -4).'.php');
-	else
-	{
-		$file_in_override = file_exists($overrideDir.$className.'.php');
-		$file_in_classes = file_exists($classDir.$className.'.php');
-	
-		if ($file_in_override && $file_in_classes)
-		{
-			require_once($classDir.str_replace(chr(0), '', $className).'.php');
-			require_once($overrideDir.$className.'.php');
-		}
-		elseif (!$file_in_override && $file_in_classes)
-		{
-			require_once($classDir.str_replace(chr(0), '', $className).'.php');
-			$classInfos = new ReflectionClass($className.((interface_exists($className, false) || class_exists($className, false)) ? '' : 'Core'));
-			if (substr($classInfos->name, -4) == 'Core' && !$classInfos->isInterface())
-				eval(($classInfos->isAbstract() ? 'abstract ' : '').'class '.$className.' extends '.$className.'Core {}');
-		}
-		elseif ($file_in_override && !$file_in_classes)
-			require_once($overrideDir.$className.'.php');
-	}
-}
+spl_autoload_register(array(Autoload::getInstance(), 'load'));

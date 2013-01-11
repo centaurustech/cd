@@ -19,13 +19,17 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16813 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
+// Retrocompatibility with 1.4
+if (typeof baseUri === "undefined" && typeof baseDir !== "undefined")
+	baseUri = baseDir;
+
 //JS Object : update the cart by ajax actions
 var ajaxCart = {
+	nb_total_products: 0,
 
 	//override every button in the page in relation to the cart
 	overrideButtonsInThePage : function(){
@@ -37,7 +41,7 @@ var ajaxCart = {
 			return false;
 		});
 		//for product page 'add' button...
-		$('body#product #add_to_cart input').unbind('click').click(function(){
+		$('#add_to_cart input').unbind('click').click(function(){
 			ajaxCart.add( $('#product_page_product_id').val(), $('#idCombination').val(), true, null, $('#quantity_wanted').val(), null);
 			return false;
 		});
@@ -80,58 +84,53 @@ var ajaxCart = {
 					productAttributeId = parseInt(ids[1]);
 			}
 
+			var idAddressDelivery = $(this).parent().parent().attr('id').match(/.*_\d+_\d+_(\d+)/)[1];
+
 			// Removing product from the cart
-			ajaxCart.remove(productId, productAttributeId, customizationId);
+			ajaxCart.remove(productId, productAttributeId, customizationId, idAddressDelivery);
 			return false;
 		});
 	},
 
 	// try to expand the cart
 	expand : function(){
-		$(['left_column', 'right_column']).each(function(id, parentId)
+		if ($('#cart_block_list').hasClass('collapsed'))
 		{
-			if ($('#'+parentId+' #cart_block #cart_block_list').hasClass('collapsed'))
-			{
-				$('#'+parentId+' #cart_block #cart_block_summary').slideUp(200, function(){
-					$(this).addClass('collapsed').removeClass('expanded');
-					$('#'+parentId+' #cart_block #cart_block_list').slideDown({
-						duration: 600,
-						complete: function(){$(this).addClass('expanded').removeClass('collapsed');}
-					});
+			$('#cart_block_summary').slideUp(200, function(){
+				$(this).addClass('collapsed').removeClass('expanded');
+				$('#cart_block_list').slideDown({
+					duration: 450,
+					complete: function(){$(this).addClass('expanded').removeClass('collapsed');}
 				});
-				// toogle the button expand/collapse button
-				$('#'+parentId+' #cart_block h4 span#block_cart_expand').fadeOut('slow', function(){
-					$('#'+parentId+' #cart_block h4 span#block_cart_collapse').fadeIn('fast');
-				});
+			});
+			// toogle the button expand/collapse button
+			$('#block_cart_expand').fadeOut('slow', function(){
+				$('#block_cart_collapse').fadeIn('fast');
+			});
 
-				// save the expand statut in the user cookie
-				$.ajax({
-					type: 'GET',
-					url: baseDir + 'modules/blockcart/blockcart-set-collapse.php',
-					async: true,
-					data: 'ajax_blockcart_display=expand' + '&rand=' + new Date().getTime()
-				});
-			}
-		});
+			// save the expand statut in the user cookie
+			$.ajax({
+				type: 'GET',
+				url: baseDir + 'modules/blockcart/blockcart-set-collapse.php',
+				async: true,
+				data: 'ajax_blockcart_display=expand' + '&rand=' + new Date().getTime()
+			});
+
+
+		}
 	},
-
-	// cart to fix display when using back and previous browsers buttons
+	// Fix display when using back and previous browsers buttons
 	refresh : function(){
-		//send the ajax request to the server
 		$.ajax({
 			type: 'GET',
-			url: baseDir + 'cart.php',
+			url: baseUri,
 			async: true,
 			cache: false,
 			dataType : "json",
-			data: 'ajax=true&token=' + static_token,
+			data: 'controller=cart&ajax=true&token=' + static_token,
 			success: function(jsonData)
 			{
 				ajaxCart.updateCart(jsonData);
-			},
-			error: function(XMLHttpRequest, textStatus, errorThrown) {
-				// in front-office, do not display technical error
-				//alert("TECHNICAL ERROR: unable to refresh the cart.\n\nDetails:\nError thrown: " + XMLHttpRequest + "\n" + 'Text status: ' + textStatus);
 			}
 		});
 	},
@@ -139,16 +138,16 @@ var ajaxCart = {
 	// try to collapse the cart
 	collapse : function(){
 
-		if ($('#cart_block #cart_block_list').hasClass('expanded'))
+		if ($('#cart_block_list').hasClass('expanded'))
 		{
-			$('#cart_block #cart_block_list').slideUp('slow', function(){
+			$('#cart_block_list').slideUp('slow', function(){
 				$(this).addClass('collapsed').removeClass('expanded');
-				$('#cart_block #cart_block_summary').slideDown(700, function(){
+				$('#cart_block_summary').slideDown(450, function(){
 					$(this).addClass('expanded').removeClass('collapsed');
 				});
 			});
-			$('#cart_block h4 span#block_cart_collapse').fadeOut('slow', function(){
-				$('#cart_block h4 span#block_cart_expand').fadeIn('fast');
+			$('#block_cart_collapse').fadeOut('slow', function(){
+				$('#block_cart_expand').fadeIn('fast');
 			});
 
 			// save the expand statut in the user cookie
@@ -168,7 +167,7 @@ var ajaxCart = {
 
 		//reactive the button when adding has finished
 		if (addedFromProductPage)
-			$('body#product #add_to_cart input').removeAttr('disabled').addClass('exclusive').removeClass('exclusive_disabled');
+			$('#add_to_cart input').removeAttr('disabled').addClass('exclusive').removeClass('exclusive_disabled');
 		else
 			$('.ajax_add_to_cart_button').removeAttr('disabled');
 	},
@@ -184,22 +183,22 @@ var ajaxCart = {
 		//disabled the button when adding to do not double add if user double click
 		if (addedFromProductPage)
 		{
-			$('body#product #add_to_cart input').attr('disabled', 'disabled').removeClass('exclusive').addClass('exclusive_disabled');
+			$('#add_to_cart input').attr('disabled', true).removeClass('exclusive').addClass('exclusive_disabled');
 			$('.filled').removeClass('filled');
 		}
 		else
-			$(callerElement).attr('disabled', 'disabled');
+			$(callerElement).attr('disabled', true);
 
-		if ($('#cart_block #cart_block_list').hasClass('collapsed'))
+		if ($('#cart_block_list').hasClass('collapsed'))
 			this.expand();
 		//send the ajax request to the server
 		$.ajax({
 			type: 'POST',
-			url: baseDir + 'cart.php',
+			url: baseUri,
 			async: true,
 			cache: false,
 			dataType : "json",
-			data: 'add=1&ajax=true&qty=' + ((quantity && quantity != null) ? quantity : '1') + '&id_product=' + idProduct + '&token=' + static_token + ( (parseInt(idCombination) && idCombination != null) ? '&ipa=' + parseInt(idCombination): ''),
+			data: 'controller=cart&add=1&ajax=true&qty=' + ((quantity && quantity != null) ? quantity : '1') + '&id_product=' + idProduct + '&token=' + static_token + ( (parseInt(idCombination) && idCombination != null) ? '&ipa=' + parseInt(idCombination): ''),
 			success: function(jsonData,textStatus,jqXHR)
 			{
 				// add appliance to whishlist module
@@ -217,13 +216,16 @@ var ajaxCart = {
 					$picture.css({'position': 'absolute', 'top': pictureOffsetOriginal.top, 'left': pictureOffsetOriginal.left});
 
 				var pictureOffset = $picture.offset();
-				var cartBlockOffset = $('#cart_block').offset();
+				if ($('#cart_block').offset().top && $('#cart_block').offset().left)
+					var cartBlockOffset = $('#cart_block').offset();
+				else
+					var cartBlockOffset = $('#shopping_cart').offset();
 
 				// Check if the block cart is activated for the animation
 				if (cartBlockOffset != undefined && $picture.size())
 				{
 					$picture.appendTo('body');
-					$picture.css({ 'position': 'absolute', 'top': $picture.css('top'), 'left': $picture.css('left') })
+					$picture.css({ 'position': 'absolute', 'top': $picture.css('top'), 'left': $picture.css('left'), 'z-index': 4242 })
 					.animate({ 'width': $element.attr('width')*0.66, 'height': $element.attr('height')*0.66, 'opacity': 0.2, 'top': cartBlockOffset.top + 30, 'left': cartBlockOffset.left + 15 }, 1000)
 					.fadeOut(100, function() {
 						ajaxCart.updateCartInformation(jsonData, addedFromProductPage);
@@ -234,10 +236,10 @@ var ajaxCart = {
 			},
 			error: function(XMLHttpRequest, textStatus, errorThrown)
 			{
-				alert("TECHNICAL ERROR: unable to add the product.\n\nDetails:\nError thrown: " + XMLHttpRequest + "\n" + 'Text status: ' + textStatus);
+				alert("Impossible to add the product to the cart.\n\ntextStatus: '" + textStatus + "'\nerrorThrown: '" + errorThrown + "'\nresponseText:\n" + XMLHttpRequest.responseText);
 				//reactive the button when adding has finished
 				if (addedFromProductPage)
-					$('body#product #add_to_cart input').removeAttr('disabled').addClass('exclusive').removeClass('exclusive_disabled');
+					$('#add_to_cart input').removeAttr('disabled').addClass('exclusive').removeClass('exclusive_disabled');
 				else
 					$(callerElement).removeAttr('disabled');
 			}
@@ -245,19 +247,19 @@ var ajaxCart = {
 	},
 
 	//remove a product from the cart via ajax
-	remove : function(idProduct, idCombination, customizationId){
+	remove : function(idProduct, idCombination, customizationId, idAddressDelivery){
 		//send the ajax request to the server
 		$.ajax({
 			type: 'POST',
-			url: baseDir + 'cart.php',
+			url: baseUri,
 			async: true,
 			cache: false,
 			dataType : "json",
-			data: 'delete=1&id_product=' + idProduct + '&ipa=' + ((idCombination != null && parseInt(idCombination)) ? idCombination : '') + ((customizationId && customizationId != null) ? '&id_customization=' + customizationId : '') + '&token=' + static_token + '&ajax=true',
+			data: 'controller=cart&delete=1&id_product=' + idProduct + '&ipa=' + ((idCombination != null && parseInt(idCombination)) ? idCombination : '') + ((customizationId && customizationId != null) ? '&id_customization=' + customizationId : '') + '&id_address_delivery=' + idAddressDelivery + '&token=' + static_token + '&ajax=true',
 			success: function(jsonData)	{
 				ajaxCart.updateCart(jsonData);
 				if ($('body').attr('id') == 'order' || $('body').attr('id') == 'order-opc')
-					deletProductFromSummary(idProduct+'_'+idCombination);
+					deleteProductFromSummary(idProduct+'_'+idCombination+'_'+customizationId+'_'+idAddressDelivery);
 			},
 			error: function() {alert('ERROR: unable to delete the product');}
 		});
@@ -265,94 +267,87 @@ var ajaxCart = {
 
 	//hide the products displayed in the page but no more in the json data
 	hideOldProducts : function(jsonData) {
-		$(['left_column', 'right_column']).each(function(id, parentId)
+		//delete an eventually removed product of the displayed cart (only if cart is not empty!)
+		if ($('#cart_block_list dl.products').length > 0)
 		{
-			//delete an eventually removed product of the displayed cart (only if cart is not empty!)
-			if($('#cart_block #cart_block_list dl.products').length > 0)
-			{
-				var removedProductId = null;
-				var removedProductData = null;
-				var removedProductDomId = null;
-				//look for a product to delete...
-				$('#'+parentId+' #cart_block_list dl.products dt').each(function()
+			var removedProductId = null;
+			var removedProductData = null;
+			var removedProductDomId = null;
+			//look for a product to delete...
+			$('#cart_block_list dl.products dt').each(function(){
+				//retrieve idProduct and idCombination from the displayed product in the block cart
+				var domIdProduct = $(this).attr('id');
+				var firstCut =  domIdProduct.replace('cart_block_product_', '');
+				var ids = firstCut.split('_');
+
+				//try to know if the current product is still in the new list
+				var stayInTheCart = false;
+				for (aProduct in jsonData.products)
 				{
-					//retrieve idProduct and idCombination from the displayed product in the block cart
-					var domIdProduct = $(this).attr('id');
-					var firstCut =  domIdProduct.replace('cart_block_product_', '');
-					var ids = firstCut.split('_');
-
-					//try to know if the current product is still in the new list
-					var stayInTheCart = false;
-					for (aProduct in jsonData.products)
+					//we've called the variable aProduct because IE6 bug if this variable is called product
+					//if product has attributes
+					if (jsonData.products[aProduct]['id'] == ids[0] && (!ids[1] || jsonData.products[aProduct]['idCombination'] == ids[1]))
 					{
-						//we've called the variable aProduct because IE6 bug if this variable is called product
-						//if product has attributes
-						if (jsonData.products[aProduct]['id'] == ids[0] && (!ids[1] || jsonData.products[aProduct]['idCombination'] == ids[1]))
-						{
-							stayInTheCart = true;
-							// update the product customization display (when the product is still in the cart)
-							ajaxCart.hideOldProductCustomizations(jsonData.products[aProduct], domIdProduct);
-						}
+						stayInTheCart = true;
+						// update the product customization display (when the product is still in the cart)
+						ajaxCart.hideOldProductCustomizations(jsonData.products[aProduct], domIdProduct);
 					}
-					//remove product if it's no more in the cart
-					if(!stayInTheCart)
-					{
-						removedProductId = $(this).attr('id');
-						//return false; // Regarding that the customer can only remove products one by one, we break the loop
-					}
-
-					//if there is a removed product, delete it from the displayed block cart
+				}
+				//remove product if it's no more in the cart
+				if (!stayInTheCart)
+				{
+					removedProductId = $(this).attr('id');
 					if (removedProductId != null)
 					{
 						var firstCut =  removedProductId.replace('cart_block_product_', '');
 						var ids = firstCut.split('_');
 
-						$('#'+parentId+' #'+removedProductId).addClass('strike').fadeTo('slow', 0, function(){
+						$('#'+removedProductId).addClass('strike').fadeTo('slow', 0, function(){
 							$(this).slideUp('slow', function(){
 								$(this).remove();
-								//if the cart is now empty, show the 'no product in the cart' message
-								if($('#'+parentId+' #cart_block dl.products dt').length == 0)
+								// If the cart is now empty, show the 'no product in the cart' message and close detail
+								if($('#cart_block dl.products dt').length == 0)
 								{
-									$('#'+parentId+' p#cart_block_no_products').slideDown('fast');
-									$('#'+parentId+' div#cart_block dl.products').remove();
+									$("#cart_block").stop(true, true).slideUp(200);
+									$('#cart_block_no_products:hidden').slideDown(450);
+									$('#cart_block dl.products').remove();
 								}
 							});
 						});
-						$('#'+parentId+' dd#cart_block_combination_of_' + ids[0] + (ids[1] ? '_'+ids[1] : '') ).fadeTo('fast', 0, function(){
+						$('#cart_block_combination_of_' + ids[0] + (ids[1] ? '_'+ids[1] : '') + (ids[2] ? '_'+ids[2] : '')).fadeTo('fast', 0, function(){
 							$(this).slideUp('fast', function(){
 								$(this).remove();
 							});
 						});
 					}
-				});
-			}
-		});
+				}
+			});
+		}
 	},
 
 	hideOldProductCustomizations : function (product, domIdProduct)
 	{
-		$(['left_column', 'right_column']).each(function(id, parentId)
+		var customizationList = $('#customization_' + product['id'] + '_' + product['idCombination']);
+		if(customizationList.length > 0)
 		{
-			var customizationList = $('#'+parentId+' #cart_block #cart_block_list ul#customization_' + product['id'] + '_' + product['idCombination']);
-			if(customizationList.length > 0)
-			{
-				$(customizationList).find("li").each(function(){
-					$(this).find("div").each(function() {
-						var customizationDiv = $(this).attr('id');
-						var tmp = customizationDiv.replace('deleteCustomizableProduct_', '');
-						var ids = tmp.split('_');
-						if ((parseInt(product.idCombination) == parseInt(ids[2])) && !ajaxCart.doesCustomizationStillExist(product, ids[0]))
-							$('#' + customizationDiv).parent().addClass('strike').fadeTo('slow', 0, function(){
-								$(this).slideUp('slow');
-								$(this).remove();
-							});
-					});
+			$(customizationList).find("li").each(function(){
+				$(this).find("div").each(function() {
+					var customizationDiv = $(this).attr('id');
+					var tmp = customizationDiv.replace('deleteCustomizableProduct_', '');
+					var ids = tmp.split('_');
+					if ((parseInt(product.idCombination) == parseInt(ids[2])) && !ajaxCart.doesCustomizationStillExist(product, ids[0]))
+						$('#' + customizationDiv).parent().addClass('strike').fadeTo('slow', 0, function(){
+							$(this).slideUp('slow');
+							$(this).remove();
+						});
 				});
-			}
-			var removeLinks = $('#'+parentId+' #cart_block_product_' + domIdProduct).find('a.ajax_cart_block_remove_link');
-			if (!product.hasCustomizedDatas && !removeLinks.length)
-				$('#'+parentId+' #' + domIdProduct + ' span.remove_link').html('<a class="ajax_cart_block_remove_link" rel="nofollow" href="' + baseDir + 'cart.php?delete&amp;id_product=' + product['id'] + '&amp;ipa=' + product['idCombination'] + '&amp;token=' + static_token + '" title="' + removingLinkText + '"> </a>');
-		});
+			});
+		}
+		var removeLinks = $('#cart_block_product_' + domIdProduct).find('a.ajax_cart_block_remove_link');
+		if (!product.hasCustomizedDatas && !removeLinks.length)
+			$('#' + domIdProduct + ' span.remove_link').html('<a class="ajax_cart_block_remove_link" rel="nofollow" href="' + baseUri + '?controller=cart&amp;delete&amp;id_product=' + product['id'] + '&amp;ipa=' + product['idCombination'] + '&amp;token=' + static_token + '"> </a>');
+		if (parseFloat(product.price_float) <= 0)
+			$('#' + domIdProduct + ' span.remove_link').html('');
 	},
 
 	doesCustomizationStillExist : function (product, customizationId)
@@ -372,45 +367,45 @@ var ajaxCart = {
 
 	//refresh display of vouchers (needed for vouchers in % of the total)
 	refreshVouchers : function (jsonData) {
-		if (jsonData.discounts.length == 0)
-			$('#vouchers').remove();
+		if (typeof(jsonData.discounts) == 'undefined' || jsonData.discounts.length == 0)
+			$('#vouchers').hide();
 		else
 		{
-			$('.bloc_cart_voucher').each(function(){
-				var idElmt = $(this).attr('id').replace('bloc_cart_voucher_','');
-				var toDelete = true;
-				for (i=0;i<jsonData.discounts.length;i++)
+			$('#vouchers tbody').html('');
+		
+			for (i=0;i<jsonData.discounts.length;i++)
+			{
+				if (parseFloat(jsonData.discounts[i].price_float) > 0)
 				{
-					if (jsonData.discounts[i].id == idElmt)
-					{
-						$('#bloc_cart_voucher_' + idElmt + ' td.price').text(jsonData.discounts[i].price);
-						toDelete = false;
-					}
+					var delete_link = '';
+					if (jsonData.discounts[i].code.length)
+						delete_link = '<a class="delete_voucher" href="'+jsonData.discounts[i].link+'" title="'+delete_txt+'"><img src="'+img_dir+'icon/delete.gif" alt="'+delete_txt+'" class="icon" /></a>';
+					$('#vouchers tbody').append($(
+						'<tr class="bloc_cart_voucher" id="bloc_cart_voucher_'+jsonData.discounts[i].id+'">'
+						+'	<td class="quantity">1x</td>'
+						+'	<td class="name" title="'+jsonData.discounts[i].description+'">'+jsonData.discounts[i].name+'</td>'
+						+'	<td class="price">-'+jsonData.discounts[i].price+'</td>'
+						+'	<td class="delete">' + delete_link + '</td>'
+						+'</tr>'
+					));
 				}
-				if (toDelete)
-				{
-					$('#bloc_cart_voucher_' + idElmt).fadeTo('fast', 0, function(){
-							$(this).remove();
-					});
-				}
-			});
-		}
+			}
 
+			$('#vouchers').show();
+		}
 
 	},
 
 	// Update product quantity
 	updateProductQuantity : function (product, quantity) {
-		$(['left_column', 'right_column']).each(function(id, parentId)
-		{
-			$('#'+parentId+' dt#cart_block_product_' + product.id + (product.idCombination ? '_' + product.idCombination : '') + ' .quantity').fadeTo('fast', 0, function() {
-				$(this).text(quantity);
-				$(this).fadeTo('fast', 1, function(){
-					$(this).fadeTo('fast', 0, function(){
-						$(this).fadeTo('fast', 1, function(){
-							$(this).fadeTo('fast', 0, function(){
-								$(this).fadeTo('fast', 1);
-							});
+
+		$('#cart_block_product_' + product.id + '_' + (product.idCombination ? product.idCombination : '0')+ '_' + (product.idAddressDelivery ? product.idAddressDelivery : '0') + ' .quantity').fadeTo('fast', 0, function() {
+			$(this).text(quantity);
+			$(this).fadeTo('fast', 1, function(){
+				$(this).fadeTo('fast', 0, function(){
+					$(this).fadeTo('fast', 1, function(){
+						$(this).fadeTo('fast', 0, function(){
+							$(this).fadeTo('fast', 1);
 						});
 					});
 				});
@@ -421,180 +416,190 @@ var ajaxCart = {
 
 	//display the products witch are in json data but not already displayed
 	displayNewProducts : function(jsonData) {
-		$(['left_column', 'right_column']).each(function(id, parentId)
-		{
-			//add every new products or update displaying of every updated products
-			$(jsonData.products).each(function(){
-				//fix ie6 bug (one more item 'undefined' in IE6)
-				if (this.id != undefined)
+
+		//add every new products or update displaying of every updated products
+		$(jsonData.products).each(function(){
+			//fix ie6 bug (one more item 'undefined' in IE6)
+			if (this.id != undefined)
+			{
+				//create a container for listing the products and hide the 'no product in the cart' message (only if the cart was empty)
+				if ($('#cart_block dl.products').length == 0)
 				{
-					//create a container for listing the products and hide the 'no product in the cart' message (only if the cart was empty)
-					if ($('#'+parentId+' div#cart_block dl.products').length == 0)
-						$('#'+parentId+' p#cart_block_no_products').fadeTo('fast', 0, function(){
-							$(this).slideUp('fast').fadeTo(0, 1);
-						}).before('<dl class="products"></dl>');
+					$('#cart_block_no_products').before('<dl class="products"></dl>');
+					$('#cart_block_no_products').hide();
+				}
+				//if product is not in the displayed cart, add a new product's line
+				var domIdProduct = this.id + '_' + (this.idCombination ? this.idCombination : '0') + '_' + (this.idAddressDelivery ? this.idAddressDelivery : '0');
 
-					//if product is not in the displayed cart, add a new product's line
-					var domIdProduct = this.id + (this.idCombination ? '_' + this.idCombination : '');
-					var domIdProductAttribute = this.id + '_' + (this.idCombination ? this.idCombination : '0');
-					if($('#'+parentId+' #cart_block dt#cart_block_product_'+ domIdProduct ).length == 0)
-					{
-						var productId = parseInt(this.id);
-						var productAttributeId = (this.hasAttributes ? parseInt(this.attributes) : 0);
-						var content =  '<dt class="hidden" id="cart_block_product_' + domIdProduct + '">';
-							content += '<span class="quantity-formated"><span class="quantity">' + this.quantity + '</span>x</span>';
-							var name = (this.name.length > 12 ? this.name.substring(0, 10) + '...' : this.name);
-							content += '<a href="' + this.link + '" title="' + this.name + '">' + name + '</a>';
-							content += '<span class="remove_link"><a rel="nofollow" class="ajax_cart_block_remove_link" href="' + baseDir + 'cart.php?delete&amp;id_product=' + productId + '&amp;token=' + static_token + (this.hasAttributes ? '&amp;ipa=' + parseInt(this.idCombination) : '') + '"> </a></span>';
-							content += '<span class="price">' + this.priceByLine + '</span>';
-							content += '</dt>';
-						if (this.hasAttributes)
-							content += '<dd id="cart_block_combination_of_' + domIdProduct + '" class="hidden"><a href="' + this.link + '" title="' + this.name + '">' + this.attributes + '</a>';
-						if (this.hasCustomizedDatas)
-							content += ajaxCart.displayNewCustomizedDatas(this);
-						if (this.hasAttributes) content += '</dd>';
-						$('#'+parentId+' #cart_block dl.products').append(content);
-					}
-					//else update the product's line
+				var domIdProductAttribute = this.id + '_' + (this.idCombination ? this.idCombination : '0');
+				if ($('#cart_block_product_'+ domIdProduct ).length == 0)
+				{
+					var productId = parseInt(this.id);
+					var productAttributeId = (this.hasAttributes ? parseInt(this.attributes) : 0);
+					var content =  '<dt class="hidden" id="cart_block_product_' + domIdProduct + '">';
+					content += '<span class="quantity-formated"><span class="quantity">' + this.quantity + '</span>x</span>';
+					var name = (this.name.length > 12 ? this.name.substring(0, 10) + '...' : this.name);
+					content += '<a href="' + this.link + '" title="' + this.name + '">' + name + '</a>';
+					
+					if (parseFloat(this.price_float) > 0)
+						content += '<span class="remove_link"><a rel="nofollow" class="ajax_cart_block_remove_link" href="' + baseUri + '?controller=cart&amp;delete&amp;id_product=' + productId + '&amp;token=' + static_token + (this.hasAttributes ? '&amp;ipa=' + parseInt(this.idCombination) : '') + '"> </a></span>';
 					else
-					{
-						var jsonProduct = this;
-						if($('#'+parentId+' dt#cart_block_product_' + domIdProduct + ' .quantity').text() != jsonProduct.quantity || $('dt#cart_block_product_' + domIdProduct + ' .price').text() != jsonProduct.priceByLine)
-						{
-							// Usual product
-							$('#'+parentId+' dt#cart_block_product_' + domIdProduct + ' .price').text(jsonProduct.priceByLine);
-							ajaxCart.updateProductQuantity(jsonProduct, jsonProduct.quantity);
+						content += '<span class="remove_link"></span>';
+					if (typeof(freeShippingTranslation) != 'undefined')
+						content += '<span class="price">' + (parseFloat(this.price_float) > 0 ? this.priceByLine : freeProductTranslation) + '</span>';
+					content += '</dt>';
+					if (this.hasAttributes)
+						  content += '<dd id="cart_block_combination_of_' + domIdProduct + '" class="hidden"><a href="' + this.link + '" title="' + this.name + '">' + this.attributes + '</a>';
+					if (this.hasCustomizedDatas)
+						content += ajaxCart.displayNewCustomizedDatas(this);
+					if (this.hasAttributes) content += '</dd>';
 
-							// Customized product
-							if (jsonProduct.hasCustomizedDatas)
+					$('#cart_block dl.products').append(content);
+				}
+				//else update the product's line
+				else
+				{
+					var jsonProduct = this;
+					if($('#cart_block_product_' + domIdProduct + ' .quantity').text() != jsonProduct.quantity || $('dt#cart_block_product_' + domIdProduct + ' .price').text() != jsonProduct.priceByLine)
+					{
+						// Usual product
+						if (parseFloat(this.price_float) > 0)
+							$('#cart_block_product_' + domIdProduct + ' .price').text(jsonProduct.priceByLine);
+						else
+							$('#cart_block_product_' + domIdProduct + ' .price').html(freeProductTranslation);
+						ajaxCart.updateProductQuantity(jsonProduct, jsonProduct.quantity);
+
+						// Customized product
+						if (jsonProduct.hasCustomizedDatas)
+						{
+							customizationFormatedDatas = ajaxCart.displayNewCustomizedDatas(jsonProduct);
+							if (!$('#customization_' + domIdProductAttribute).length)
 							{
-								customizationFormatedDatas = ajaxCart.displayNewCustomizedDatas(jsonProduct);
-								if (!$('#'+parentId+' #cart_block ul#customization_' + domIdProductAttribute).length)
-								{
-									if (jsonProduct.hasAttributes)
-										$('#'+parentId+' #cart_block dd#cart_block_combination_of_' + domIdProduct).append(customizationFormatedDatas);
-									else
-										$('#'+parentId+' #cart_block dl.products').append(customizationFormatedDatas);
-								}
+								if (jsonProduct.hasAttributes)
+									$('#cart_block_combination_of_' + domIdProduct).append(customizationFormatedDatas);
 								else
-									$('#'+parentId+' #cart_block ul#customization_' + domIdProductAttribute).append(customizationFormatedDatas);
+									$('#cart_block dl.products').append(customizationFormatedDatas);
+							}
+							else
+							{
+								$('#customization_' + domIdProductAttribute).html('');
+								$('#customization_' + domIdProductAttribute).append(customizationFormatedDatas);
 							}
 						}
 					}
-					$('#'+parentId+' #cart_block dl.products .hidden').slideDown('slow').removeClass('hidden');
-
-				var removeLinks = $('#'+parentId+' #cart_block_product_' + domIdProduct).find('a.ajax_cart_block_remove_link');
-				if (this.hasCustomizedDatas && removeLinks.length)
-					$(removeLinks).each(function() {
-						$(this).remove();
-					});
 				}
-			});
+				$('#cart_block dl.products .hidden').slideDown(450).removeClass('hidden');
+
+			var removeLinks = $('#cart_block_product_' + domIdProduct).find('a.ajax_cart_block_remove_link');
+			if (this.hasCustomizedDatas && removeLinks.length)
+				$(removeLinks).each(function() {
+					$(this).remove();
+				});
+			}
 		});
 	},
 
 	displayNewCustomizedDatas : function(product)
 	{
 		var content = '';
-		$('#cart_block').each(function(id, parentId)
+		var productId = parseInt(product.id);
+		var productAttributeId = typeof(product.idCombination) == 'undefined' ? 0 : parseInt(product.idCombination);
+		var hasAlreadyCustomizations = $('#customization_' + productId + '_' + productAttributeId).length;
+
+		if (!hasAlreadyCustomizations)
 		{
-			var productId = parseInt(product.id);
-			var productAttributeId = typeof(product.idCombination) == 'undefined' ? 0 : parseInt(product.idCombination);
-			var hasAlreadyCustomizations = $(this).children('ul#customization_' + productId + '_' + productAttributeId).length;
+			if (!product.hasAttributes)
+				content += '<dd id="cart_block_combination_of_' + productId + '" class="hidden">';
+			if ($('#customization_' + productId + '_' + productAttributeId).val() == undefined)
+				content += '<ul class="cart_block_customizations" id="customization_' + productId + '_' + productAttributeId + '">';
+		}
 
-			if (!hasAlreadyCustomizations)
-			{
-				if (!product.hasAttributes)
-					content += '<dd id="cart_block_combination_of_' + productId + '" class="hidden">';
-				if ($('#customization_' + productId + '_' + productAttributeId).val() == undefined)
-					content += '<ul class="cart_block_customizations" id="customization_' + productId + '_' + productAttributeId + '">';
-			}
+		$(product.customizedDatas).each(function(){
+			var done = 0;
+			customizationId = parseInt(this.customizationId);
+			productAttributeId = typeof(product.idCombination) == 'undefined' ? 0 : parseInt(product.idCombination);
+			content += '<li name="customization"><div class="deleteCustomizableProduct" id="deleteCustomizableProduct_' + customizationId + '_' + productId + '_' + (productAttributeId ?  productAttributeId : '0') + '"><a  rel="nofollow" class="ajax_cart_block_remove_link" href="' + baseUri + '?controller=cart&amp;delete&amp;id_product=' + productId + '&amp;ipa=' + productAttributeId + '&amp;id_customization=' + customizationId + '&amp;token=' + static_token + '"> </a></div><span class="quantity-formated"><span class="quantity">' + parseInt(this.quantity) + '</span>x</span>';
 
-			$(product.customizedDatas).each(function(){
-				var done = 0;
-				customizationId = parseInt(this.customizationId);
-				productAttributeId = typeof(product.idCombination) == 'undefined' ? 0 : parseInt(product.idCombination);
-				// If the customization is already displayed on the cart, no update's needed
-				if ($("#deleteCustomizableProduct_" + customizationId + "_" + productId + "_" + productAttributeId).length)
-					return ('');
-				content += '<li name="customization"><div class="deleteCustomizableProduct" id="deleteCustomizableProduct_' + customizationId + '_' + productId + '_' + (productAttributeId ?  productAttributeId : '0') + '"><a  rel="nofollow" class="ajax_cart_block_remove_link" href="' + baseDir + 'cart.php?delete&amp;id_product=' + productId + '&amp;ipa=' + productAttributeId + '&amp;id_customization=' + customizationId + '&amp;token=' + static_token + '"> </a></div><span class="quantity-formated"><span class="quantity">' + parseInt(this.quantity) + '</span>x</span>';
-
-				// Give to the customized product the first textfield value as name
-				$(this.datas).each(function(){
-					if (this['type'] == CUSTOMIZE_TEXTFIELD)
-					{
-						$(this.datas).each(function(){
-							if (this['index'] == 0)
-							{
-								content += this.truncatedValue.replace(/<br \/>/g, ' ');
-								done = 1;
-								return false;
-							}
-						})
-					}
-				});
-
-				// If the customized product did not have any textfield, it will have the customizationId as name
-				if (!done)
-					content += customizationIdMessage + customizationId;
-				if (!hasAlreadyCustomizations) content += '</li>';
-				// Field cleaning
-				if (customizationId)
+			// Give to the customized product the first textfield value as name
+			$(this.datas).each(function(){
+				if (this['type'] == CUSTOMIZE_TEXTFIELD)
 				{
-					$(this).children('#uploadable_files li div.customizationUploadBrowse img').remove();
-					$(this).children('#text_fields li input').attr('value', '');
+					$(this.datas).each(function(){
+						if (this['index'] == 0)
+						{
+							content += ' ' + this.truncatedValue.replace(/<br \/>/g, ' ');
+							done = 1;
+							return false;
+						}
+					})
 				}
 			});
 
-			if (!hasAlreadyCustomizations)
+			// If the customized product did not have any textfield, it will have the customizationId as name
+			if (!done)
+				content += customizationIdMessage + customizationId;
+			if (!hasAlreadyCustomizations) content += '</li>';
+			// Field cleaning
+			if (customizationId)
 			{
-				content += '</ul>';
-				if (!product.hasAttributes) content += '</dd>';
+				$('#uploadable_files li div.customizationUploadBrowse img').remove();
+				$('#text_fields input').attr('value', '');
 			}
 		});
-		return content;
+
+		if (!hasAlreadyCustomizations)
+		{
+			content += '</ul>';
+			if (!product.hasAttributes) content += '</dd>';
+		}
+		return (content);
 	},
 
 
 	//genarally update the display of the cart
 	updateCart : function(jsonData) {
-			//user errors display
-			if (jsonData.hasError)
-			{
-				var errors = '';
-				for (error in jsonData.errors)
-					//IE6 bug fix
-					if (error != 'indexOf')
-						errors += jsonData.errors[error] + "\n";
-				alert(errors);
-			}
-			else
-			{
-				ajaxCart.updateCartEverywhere(jsonData);
-				ajaxCart.hideOldProducts(jsonData);
-				ajaxCart.displayNewProducts(jsonData);
-				ajaxCart.refreshVouchers(jsonData);
+		//user errors display
+		if (jsonData.hasError)
+		{
+			var errors = '';
+			for(error in jsonData.errors)
+				//IE6 bug fix
+				if(error != 'indexOf')
+					errors += jsonData.errors[error] + "\n";
+			alert(errors);
+		}
+		else
+		{
+			ajaxCart.updateCartEverywhere(jsonData);
+			ajaxCart.hideOldProducts(jsonData);
+			ajaxCart.displayNewProducts(jsonData);
+			ajaxCart.refreshVouchers(jsonData);
 
-				//update 'first' and 'last' item classes
-				$(['left_column', 'right_column']).each(function(id, parentId)
-				{
-				    $('#'+parentId+' #cart_block dl.products dt').removeClass('first_item').removeClass('last_item').addClass('item');
-				    $('#'+parentId+' #cart_block dl.products dt:first').addClass('first_item').removeClass('item');
-				    $('#'+parentId+' #cart_block dl.products dt:last').addClass('last_item').removeClass('item');
-				});
+			//update 'first' and 'last' item classes
+			$('#cart_block .products dt').removeClass('first_item').removeClass('last_item').removeClass('item');
+			$('#cart_block .products dt:first').addClass('first_item');
+			$('#cart_block .products dt:not(:first,:last)').addClass('item');
+			$('#cart_block .products dt:last').addClass('last_item');
 
-				//reset the onlick events in relation to the cart block (it allow to bind the onclick event to the new 'delete' buttons added)
-				ajaxCart.overrideButtonsInThePage();
-			}
+			//reset the onlick events in relation to the cart block (it allow to bind the onclick event to the new 'delete' buttons added)
+			ajaxCart.overrideButtonsInThePage();
+		}
 	},
 
 	//update general cart informations everywhere in the page
 	updateCartEverywhere : function(jsonData) {
 		$('.ajax_cart_total').text(jsonData.productTotal);
-		$('.ajax_cart_shipping_cost').text(jsonData.shippingCost);
+		
+		if (parseFloat(jsonData.shippingCostFloat) > 0 || jsonData.nbTotalProducts < 1)
+			$('.ajax_cart_shipping_cost').text(jsonData.shippingCost);
+		else if (typeof(freeShippingTranslation) != 'undefined')
+				$('.ajax_cart_shipping_cost').html(freeShippingTranslation);
 		$('.ajax_cart_tax_cost').text(jsonData.taxCost);
 		$('.cart_block_wrapping_cost').text(jsonData.wrappingCost);
 		$('.ajax_block_cart_total').text(jsonData.total);
+
+		this.nb_total_products = jsonData.nbTotalProducts;
+		
 		if (parseInt(jsonData.nbTotalProducts) > 0)
 		{
 			$('.ajax_cart_no_product').hide();
@@ -604,34 +609,104 @@ var ajaxCart = {
 
 			if (parseInt(jsonData.nbTotalProducts) > 1)
 			{
-			    $('.ajax_cart_product_txt').hide();
-			    $('.ajax_cart_product_txt_s').show();
+				$('.ajax_cart_product_txt').each( function () {
+					$(this).hide();
+				});
+
+				$('.ajax_cart_product_txt_s').each( function () {
+					$(this).show();
+				});
 			}
 			else
 			{
-			    $('.ajax_cart_product_txt').show();
-			    $('.ajax_cart_product_txt_s').hide();
+				$('.ajax_cart_product_txt').each( function () {
+					$(this).show();
+				});
+
+				$('.ajax_cart_product_txt_s').each( function () {
+					$(this).hide();
+				});
 			}
 		}
 		else
 		{
-		    $('.ajax_cart_quantity, .ajax_cart_product_txt_s, .ajax_cart_product_txt, .ajax_cart_total').hide();
-		    $('.ajax_cart_no_product').show('slow');
+			$('.ajax_cart_quantity, .ajax_cart_product_txt_s, .ajax_cart_product_txt, .ajax_cart_total').each(function(){
+				$(this).hide();
+			});
+			$('.ajax_cart_no_product').show('slow');
 		}
 	}
 };
 
+function HoverWatcher(selector){
+	this.hovering = false;
+	var self = this;
+
+	this.isHoveringOver = function() {
+		return self.hovering;
+	}
+
+	$(selector).hover(function() {
+		self.hovering = true;
+	}, function() {
+		self.hovering = false;
+	})
+}
+
 //when document is loaded...
-$(document).ready(function() {
-
+$(document).ready(function(){
 	// expand/collapse management
-	$('#block_cart_collapse').click(ajaxCart.collapse);
-	$('#block_cart_expand').click(ajaxCart.expand);
+	$('#block_cart_collapse').click(function(){
+			ajaxCart.collapse();
+	});
+	$('#block_cart_expand').click(function(){
+			ajaxCart.expand();
+	});
 	ajaxCart.overrideButtonsInThePage();
+	ajaxCart.refresh();
 
-    /** Disabled to avoid a useless Ajax call on each page
-     * Downside: If the user clicks "Back", the cart will not be refreshed
-     * If you would like to force this behavior, just uncomment the following line:
-     */
-    // ajaxCart.refresh();
+	/* roll over cart */
+	var cart_block = new HoverWatcher('#cart_block');
+	var shopping_cart = new HoverWatcher('#shopping_cart');
+
+	$("#shopping_cart a:first").hover(
+		function() {
+			$(this).css('border-radius', '3px 3px 0px 0px');
+			if (ajaxCart.nb_total_products > 0)
+				$("#cart_block").stop(true, true).slideDown(450);
+		},
+		function() {
+			$('#shopping_cart a').css('border-radius', '3px');
+			setTimeout(function() {
+				if (!shopping_cart.isHoveringOver() && !cart_block.isHoveringOver())
+					$("#cart_block").stop(true, true).slideUp(450);
+			}, 200);
+		}
+	);
+
+	$("#cart_block").hover(
+		function() {
+			$('#shopping_cart a').css('border-radius', '3px 3px 0px 0px');
+		},
+		function() {
+			$('#shopping_cart a').css('border-radius', '3px');
+			setTimeout(function() {
+				if (!shopping_cart.isHoveringOver())
+					$("#header #cart_block").stop(true, true).slideUp(450);
+			}, 200);
+		}
+	);
+	
+	$('.delete_voucher').live('click', function() {
+		$.ajax({url:$(this).attr('href')});
+		$(this).parent().parent().remove();
+		if ($('body').attr('id') == 'order' || $('body').attr('id') == 'order-opc')
+		{
+			if (typeof(updateAddressSelection) != 'undefined')
+				updateAddressSelection();
+			else
+				location.reload();
+		}
+		return false;
+	});
 });

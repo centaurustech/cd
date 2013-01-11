@@ -20,19 +20,18 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14007 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
+/**
+ * This file will be removed in 1.6
+ * You have to use index.php?controller=page_name instead of this page
+ *
+ * @deprecated 1.5.0
+ */
+
 require(dirname(__FILE__).'/config/config.inc.php');
-require(dirname(__FILE__).'/init.php');
+Tools::displayFileAsDeprecated();
 
-$a = new Attachment((int)(Tools::getValue('id_attachment')), (int)($cookie->id_lang));
-
-header('Content-Transfer-Encoding: binary');
-header('Content-Type: '.$a->mime);
-header('Content-Length: '.filesize(_PS_DOWNLOAD_DIR_.$a->file));
-header('Content-Disposition: attachment; filename="'.utf8_decode($a->file_name).'"');
-readfile(_PS_DOWNLOAD_DIR_.$a->file);
-exit;
+Tools::redirect('index.php?controller=attachment'.($_REQUEST ? '&'.http_build_query($_REQUEST, '', '&') : ''), __PS_BASE_URI__, null, 'HTTP/1.1 301 Moved Permanently');

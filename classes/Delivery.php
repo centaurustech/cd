@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14001 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -29,7 +28,13 @@ class DeliveryCore extends ObjectModel
 {
 	/** @var integer */
 	public $id_delivery;
-	
+
+	/** @var int **/
+	public $id_shop;
+
+	/** @var int **/
+	public $id_shop_group;
+
 	/** @var integer */
 	public $id_carrier;
 
@@ -39,40 +44,55 @@ class DeliveryCore extends ObjectModel
 	/** @var integer */
 	public $id_range_weight;
 
-	/** @var integer */	
+	/** @var integer */
 	public $id_zone;
 
-	/** @var float */	
+	/** @var float */
 	public $price;
 
-	protected	$fieldsRequired = array ('id_carrier', 'id_range_price', 'id_range_weight', 'id_zone', 'price');	
-	protected	$fieldsValidate = array ('id_carrier' => 'isUnsignedId', 'id_range_price' => 'isUnsignedId', 
-	'id_range_weight' => 'isUnsignedId', 'id_zone' => 'isUnsignedId', 'price' => 'isPrice');
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'delivery',
+		'primary' => 'id_delivery',
+		'fields' => array(
+			'id_carrier' => 	array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'id_range_price' => array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'id_range_weight' =>array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'id_zone' => 		array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'id_shop' => 		array('type' => self::TYPE_INT),
+			'id_shop_group' => 	array('type' => self::TYPE_INT),
+			'price' => 			array('type' => self::TYPE_FLOAT, 'validate' => 'isPrice', 'required' => true),
+		),
+	);
 
-	protected 	$table = 'delivery';
-	protected 	$identifier = 'id_delivery';
-	
-	protected	$webserviceParameters = array(
-			'objectsNodeName' => 'deliveries',
-			'fields' => array(
-				'id_carrier' => array('xlink_resource' => 'carriers'),
-				'id_range_price' => array('xlink_resource' => 'price_ranges'),
-				'id_range_weight' => array('xlink_resource' => 'weight_ranges'),
-				'id_zone' => array('xlink_resource' => 'zones'),
+	protected $webserviceParameters = array(
+		'objectsNodeName' => 'deliveries',
+		'fields' => array(
+			'id_carrier' => array('xlink_resource' => 'carriers'),
+			'id_range_price' => array('xlink_resource' => 'price_ranges'),
+			'id_range_weight' => array('xlink_resource' => 'weight_ranges'),
+			'id_zone' => array('xlink_resource' => 'zones'),
 		)
 	);
-	
+
 	public function getFields()
 	{
-		parent::validateFields();
+		$fields = parent::getFields();
 
-		$fields['id_carrier'] = (int)($this->id_carrier);
-		$fields['id_range_price'] = (int)($this->id_range_price);
-		$fields['id_range_weight'] = (int)($this->id_range_weight);
-		$fields['id_zone'] = (int)($this->id_zone);
-		$fields['price'] = (float)($this->price);
-		
+		// @todo add null management in definitions
+		if ($this->id_shop)
+			$fields['id_shop'] = (int)$this->id_shop;
+		else
+			$fields['id_shop'] = null;
+
+		if ($this->id_shop_group)
+			$fields['id_shop_group'] = (int)$this->id_shop_group;
+		else
+			$fields['id_shop_group'] = null;
+
 		return $fields;
-	}	
+	}
 }
 

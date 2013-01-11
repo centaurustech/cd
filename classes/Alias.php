@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14001 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,42 +29,84 @@ class AliasCore extends ObjectModel
 	public $alias;
 	public $search;
 	public $active = true;
-		
- 	protected 	$fieldsRequired = array('alias', 'search');
- 	protected 	$fieldsSize = array('alias' => 255, 'search' => 255);
- 	protected 	$fieldsValidate = array('search' => 'isValidSearch', 'alias' => 'isValidSearch', 'active' => 'isBool');
 
-	protected 	$table = 'alias';
-	protected 	$identifier = 'id_alias';
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'alias',
+		'primary' => 'id_alias',
+		'fields' => array(
+			'search' => array('type' => self::TYPE_STRING, 'validate' => 'isValidSearch', 'required' => true, 'size' => 255),
+			'alias' => 	array('type' => self::TYPE_STRING, 'validate' => 'isValidSearch', 'required' => true, 'size' => 255),
+			'active' => array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+		),
+	);
 
-	function __construct($id = NULL, $alias = NULL, $search = NULL, $id_lang = NULL)
+	public function __construct($id = null, $alias = null, $search = null, $id_lang = null)
 	{
+		$this->def = Alias::getDefinition($this);
+		$this->setDefinitionRetrocompatibility();
+
 		if ($id)
 			parent::__construct($id);
-		elseif ($alias AND Validate::isValidSearch($alias))
+		else if ($alias && Validate::isValidSearch($alias))
 		{
-			$row = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-			SELECT a.id_alias, a.search, a.alias
-			FROM `'._DB_PREFIX_.'alias` a
-			WHERE `alias` LIKE \''.pSQL($alias).'\' AND `active` = 1');
-
-			if ($row)
-			{
-			 	$this->id = (int)($row['id_alias']);
-			 	$this->search = $search ? trim($search) : $row['search'];
-				$this->alias = $row['alias'];
-			}
-			else
+			if (!Alias::isFeatureActive())
 			{
 				$this->alias = trim($alias);
 				$this->search = trim($search);
 			}
+			else
+			{
+				$row = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
+				SELECT a.id_alias, a.search, a.alias
+				FROM `'._DB_PREFIX_.'alias` a
+				WHERE `alias` LIKE \''.pSQL($alias).'\' AND `active` = 1');
+
+				if ($row)
+				{
+				 	$this->id = (int)($row['id_alias']);
+				 	$this->search = $search ? trim($search) : $row['search'];
+					$this->alias = $row['alias'];
+				}
+				else
+				{
+					$this->alias = trim($alias);
+					$this->search = trim($search);
+				}
+			}
 		}
+	}
+
+	public function add($autodate = true, $nullValues = false)
+	{
+		if (parent::add($autodate, $nullValues))
+		{
+			// Set cache of feature detachable to true
+			Configuration::updateGlobalValue('PS_ALIAS_FEATURE_ACTIVE', '1');
+			return true;
+		}
+		return false;
+	}
+
+	public function delete()
+	{
+		if (parent::delete())
+		{
+			// Refresh cache of feature detachable
+			Configuration::updateGlobalValue('PS_ALIAS_FEATURE_ACTIVE', Alias::isCurrentlyUsed($this->def['table'], true));
+			return true;
+		}
+		return false;
 	}
 
 	public function getAliases()
 	{
-		$aliases = Db::getInstance()->ExecuteS('
+		if (!Alias::isFeatureActive())
+			return '';
+
+		$aliases = Db::getInstance()->executeS('
 		SELECT a.alias
 		FROM `'._DB_PREFIX_.'alias` a
 		WHERE `search` = \''.pSQL($this->search).'\'');
@@ -73,15 +114,15 @@ class AliasCore extends ObjectModel
 		$aliases = array_map('implode', $aliases);
 		return implode(', ', $aliases);
 	}
-	
-	public function getFields()
+
+	/**
+	 * This method is allow to know if a feature is used or active
+	 * @since 1.5.0.1
+	 * @return bool
+	 */
+	public static function isFeatureActive()
 	{
-		parent::validateFields();
-		
-		$fields['alias'] = pSQL($this->alias);
-		$fields['search'] = pSQL($this->search);
-		$fields['active'] = (int)($this->active);
-		return $fields;
+		return Configuration::get('PS_ALIAS_FEATURE_ACTIVE');
 	}
 }
 

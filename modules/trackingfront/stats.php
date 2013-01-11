@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -31,7 +30,7 @@ include(dirname(__FILE__).'/trackingfront.php');
 
 $tf = new TrackingFront();
 if (!$tf->active)
-	Tools::redirect('404.php');
+	Tools::redirect('index.php?controller=404');
 $tf->postProcess();
 echo $tf->isLogged() ? $tf->displayAccount() : $tf->displayLogin();
 

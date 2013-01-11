@@ -20,88 +20,94 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16897 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
-  
+
 if (!defined('_PS_VERSION_'))
 	exit;
 
 class StatsStock extends Module
 {
-	function __construct()
+	private $html = '';
+
+	public function __construct()
 	{
 		$this->name = 'statsstock';
 		$this->tab = 'analytics_stats';
-		$this->version = '1.0.1';
+		$this->version = 1.0;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		parent::__construct();
 
-		$this->displayName = $this->l('Stock stats');
+		$this->displayName = $this->l('Available quantities stats');
 		$this->description = '';
 	}
 
 	public function install()
 	{
-		return (parent::install() && $this->registerHook('AdminStatsModules'));
+		return parent::install() && $this->registerHook('AdminStatsModules');
 	}
-	
-	function hookAdminStatsModules()
+
+	public function hookAdminStatsModules()
 	{
-		global $cookie, $currentIndex;
-		
 		if (Tools::isSubmit('submitCategory'))
-			$cookie->statsstock_id_category = Tools::getValue('statsstock_id_category');
-		
-		$ru = $currentIndex.'&module='.$this->name.'&token='.Tools::getValue('token');
+			$this->context->cookie->statsstock_id_category = Tools::getValue('statsstock_id_category');
+
+		$ru = AdminController::$currentIndex.'&module='.$this->name.'&token='.Tools::getValue('token');
 		$currency = new Currency(Configuration::get('PS_CURRENCY_DEFAULT'));
-		$filter = ((int)$cookie->statsstock_id_category ? 'WHERE p.id_product IN (SELECT cp.id_product FROM '._DB_PREFIX_.'category_product cp WHERE cp.id_category = '.(int)$cookie->statsstock_id_category.')' : '');
-		$products = Db::getInstance()->ExecuteS('
-		SELECT p.id_product, p.reference, pl.name,
-			IFNULL((
-				SELECT AVG(pa.wholesale_price)
-				FROM '._DB_PREFIX_.'product_attribute pa WHERE p.id_product = pa.id_product
-				AND wholesale_price != 0
-			), p.wholesale_price) as wholesale_price,
-			IFNULL((
-				SELECT SUM(pa.quantity)
-				FROM '._DB_PREFIX_.'product_attribute pa WHERE p.id_product = pa.id_product
-			), p.quantity) as quantity,
-			IFNULL((
-				SELECT SUM(IF(pa.wholesale_price > 0, pa.wholesale_price, p.wholesale_price) * pa.quantity)
-				FROM '._DB_PREFIX_.'product_attribute pa WHERE p.id_product = pa.id_product
-			), p.wholesale_price * p.quantity) as stockvalue
-		FROM '._DB_PREFIX_.'product p
-		INNER JOIN '._DB_PREFIX_.'product_lang pl ON (p.id_product = pl.id_product AND pl.id_lang = '.(int)$cookie->id_lang.')
-		'.$filter);
-		
-		echo '
+		$filter = ((int)$this->context->cookie->statsstock_id_category ? ' AND p.id_product IN (SELECT cp.id_product FROM '._DB_PREFIX_.'category_product cp WHERE cp.id_category = '.(int)$this->context->cookie->statsstock_id_category.')' : '');
+
+		$sql = 'SELECT p.id_product, p.reference, pl.name,
+				IFNULL((
+					SELECT AVG(product_attribute_shop.wholesale_price)
+					FROM '._DB_PREFIX_.'product_attribute pa
+					'.Shop::addSqlAssociation('product_attribute', 'pa').'
+					WHERE p.id_product = pa.id_product
+					AND product_attribute_shop.wholesale_price != 0
+				), product_shop.wholesale_price) as wholesale_price,
+				IFNULL(stock.quantity, 0) as quantity
+				FROM '._DB_PREFIX_.'product p
+				'.Shop::addSqlAssociation('product', 'p').'
+				INNER JOIN '._DB_PREFIX_.'product_lang pl
+					ON (p.id_product = pl.id_product AND pl.id_lang = '.(int)$this->context->language->id.Shop::addSqlRestrictionOnLang('pl').')
+				'.Product::sqlStock('p', 0).'
+				WHERE 1 = 1
+				'.$filter;
+		$products = Db::getInstance()->executeS($sql);
+
+		foreach ($products as $key => $p)
+		{
+			$products[$key]['stockvalue'] = $p['wholesale_price'] * $p['quantity'];
+		}
+
+		$this->html .= '
 		<script type="text/javascript">$(\'#calendar\').slideToggle();</script>
-		<h2 style="float:left">'.$this->l('Stock value').'</h2>
-		<form action="'.$ru.'" method="post" style="float:right">
+		<div class="blocStats"><h2 class="icon-'.$this->name.'"><span></span>'.$this->l('Available quantities for sale valuation').'</h2>
+		<form action="'.$ru.'" method="post">
 			<input type="hidden" name="submitCategory" value="1" />
 			'.$this->l('Category').' : <select name="statsstock_id_category" onchange="this.form.submit();">
 				<option value="0">-- '.$this->l('All').' --</option>';
-		foreach (Category::getSimpleCategories($cookie->id_lang) as $category)
-			echo '<option value="'.(int)$category['id_category'].'" '.($cookie->statsstock_id_category == $category['id_category'] ? 'selected="selected"' : '').'>'.$category['name'].'</option>';
-		echo '	</select>
-		</form>
-		<div style="clear:both">&nbsp;</div>';
-		
+		foreach (Category::getSimpleCategories($this->context->language->id) as $category)
+			$this->html .= '<option value="'.(int)$category['id_category'].'" '.
+				($this->context->cookie->statsstock_id_category == $category['id_category'] ? 'selected="selected"' : '').'>'.
+				$category['name'].'
+			</option>';
+		$this->html .= '</select>
+		</form><br />';
+
 		if (!count($products))
-			echo $this->l('Your catalog is empty.');
+			$this->html .= $this->l('Your catalog is empty.');
 		else
 		{
 			$rollup = array('quantity' => 0, 'wholesale_price' => 0, 'stockvalue' => 0);
-			echo '<table class="table" cellspacing="0" cellpadding="0" style="width: 679px;">
+			$this->html .= '<table class="table" cellspacing="0" cellpadding="0">
 			<tr>
 				<th>'.$this->l('ID').'</th>
 				<th>'.$this->l('Ref.').'</th>
 				<th style="width:350px">'.$this->l('Item').'</th>
-				<th>'.$this->l('Stock').'</th>
+				<th>'.$this->l('Available quantity for sale').'</th>
 				<th>'.$this->l('Price*').'</th>
 				<th>'.$this->l('Value').'</th>
 			</tr>';
@@ -110,31 +116,32 @@ class StatsStock extends Module
 				$rollup['quantity'] += $product['quantity'];
 				$rollup['wholesale_price'] += $product['wholesale_price'];
 				$rollup['stockvalue'] += $product['stockvalue'];
-				echo '<tr>
-					<td>'.(int)$product['id_product'].'</td>
-					<td>'.Tools::safeOutput($product['reference']).'</td>
-					<td>'.(Tools::strlen($product['name']) > 60 ? '<span title="'.Tools::safeOutput($product['name']).'">'.Tools::substr(Tools::safeOutput($product['name']), 0, 60).'...</span>' : Tools::safeOutput($product['name'])).'</td>
-					<td>'.(int)$product['quantity'].'</td>
+				$this->html .= '<tr>
+					<td>'.$product['id_product'].'</td>
+					<td>'.$product['reference'].'</td>
+					<td>'.$product['name'].'</td>
+					<td>'.$product['quantity'].'</td>
 					<td>'.Tools::displayPrice($product['wholesale_price'], $currency).'</td>
 					<td>'.Tools::displayPrice($product['stockvalue'], $currency).'</td>
 				</tr>';
 			}
-			echo '
+			$this->html .= '
 				<tr>
 					<th colspan="3"></th>
-					<th>'.$this->l('Total stock').'</th>
+					<th>'.$this->l('Total quantities').'</th>
 					<th>'.$this->l('Avg price').'</th>
 					<th>'.$this->l('Total value').'</th>
 				</tr>
 				<tr>
 					<td colspan="3"></td>
-					<td>'.(int)$rollup['quantity'].'</td>
+					<td>'.$rollup['quantity'].'</td>
 					<td>'.Tools::displayPrice($rollup['wholesale_price'] / count($products), $currency).'</td>
 					<td>'.Tools::displayPrice($rollup['stockvalue'], $currency).'</td>
 				</tr>
 			</table>
-			<p>* '.$this->l('Average price when the product has attributes.').'</p>';
-		}
-    }
-}
+			<p>* '.$this->l('Correspond to the default wholesale price according to the default supplier for the product. An average price is used when the product has attributes.').'</p></div>';
 
+			return $this->html;
+		}
+	}
+}

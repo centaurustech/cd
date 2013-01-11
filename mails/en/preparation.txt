@@ -1,13 +1,11 @@
-	Hi {firstname} {lastname},
-		
-	Your order #{id_order} history
-	
-	We are processing your order.
+Hi {firstname} {lastname},
 
-	You can review this order and download your invoice from the "Order history" section of your account by clicking "My account" on our Website.
-	
-	{shop_name} - {shop_url}
+We are currently processing your {shop_name} order with the reference {order_name}.
 
+You can review your order and download your invoice from the "Order history" section of your customer account by clicking "My account" on our shop.
 
+If you have guest account, you can follow your order using this link: {guest_tracking_url}
 
-	{shop_url} powered by PrestaShop™
+{shop_name} - {shop_url}
+
+{shop_url} powered by PrestaShop&trade;

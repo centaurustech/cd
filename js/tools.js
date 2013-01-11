@@ -19,10 +19,63 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16166 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
+
+function formatedNumberToFloat(price, currencyFormat, currencySign)
+{
+	price = price.replace(currencySign, '');
+	if (currencyFormat == 1)
+		return parseFloat(price.replace(',', '').replace(' ', ''));
+	else if (currencyFormat == 2)
+		return parseFloat(price.replace(' ', '').replace(',', '.'));
+	else if (currencyFormat == 3)
+		return parseFloat(price.replace('.', '').replace(' ', '').replace(',', '.'));
+	else if (currencyFormat == 4)
+		return parseFloat(price.replace(',', '').replace(' ', ''));
+	return price;
+}
+
+//return a formatted number
+function formatNumber(value, numberOfDecimal, thousenSeparator, virgule)
+{
+	value = value.toFixed(numberOfDecimal);
+	var val_string = value+'';
+	var tmp = val_string.split('.');
+	var abs_val_string = (tmp.length == 2) ? tmp[0] : val_string;
+	var deci_string = ('0.' + (tmp.length == 2 ? tmp[1] : 0)).substr(2);
+	var nb = abs_val_string.length;
+
+	for (var i = 1 ; i < 4; i++)
+		if (value >= Math.pow(10, (3 * i)))
+			abs_val_string = abs_val_string.substring(0, nb - (3 * i)) + thousenSeparator + abs_val_string.substring(nb - (3 * i));
+
+	if (parseInt(numberOfDecimal) == 0)
+		return abs_val_string;
+	return abs_val_string + virgule + (deci_string > 0 ? deci_string : '00');
+}
+
+function formatCurrency(price, currencyFormat, currencySign, currencyBlank)
+{
+	// if you modified this function, don't forget to modify the PHP function displayPrice (in the Tools.php class)
+	blank = '';
+	price = parseFloat(price.toFixed(6));
+	price = ps_round(price, priceDisplayPrecision);
+	if (currencyBlank > 0)
+		blank = ' ';
+	if (currencyFormat == 1)
+		return currencySign + blank + formatNumber(price, priceDisplayPrecision, ',', '.');
+	if (currencyFormat == 2)
+		return (formatNumber(price, priceDisplayPrecision, ' ', ',') + blank + currencySign);
+	if (currencyFormat == 3)
+		return (currencySign + blank + formatNumber(price, priceDisplayPrecision, '.', ','));
+	if (currencyFormat == 4)
+		return (formatNumber(price, priceDisplayPrecision, ',', '.') + blank + currencySign);
+	if (currencyFormat == 5)
+		return (formatNumber(price, priceDisplayPrecision, ' ', '.') + blank + currencySign);
+	return price;
+}
 
 function ps_round(value, precision)
 {
@@ -210,8 +263,8 @@ function setCurrency(id_currency)
 {
 	$.ajax({
 		type: 'POST',
-		url: baseDir + 'changecurrency.php',
-		data: 'id_currency='+parseInt(id_currency),
+		url: baseDir + 'index.php',
+		data: 'controller=change-currency&id_currency='+ parseInt(id_currency),
 		success: function(msg)
 		{
 			location.reload(true);

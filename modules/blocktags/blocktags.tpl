@@ -19,18 +19,17 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <!-- Block tags module -->
 <div id="tags_block_left" class="block tags_block">
-	<h4>{l s='Tags' mod='blocktags'}</h4>
+	<h4 class="title_block">{l s='Tags' mod='blocktags'}</h4>
 	<p class="block_content">
 {if $tags}
 	{foreach from=$tags item=tag name=myLoop}
-		<a href="{$link->getPageLink('search.php')}?tag={$tag.name|urlencode}" title="{l s='More about' mod='blocktags'} {$tag.name|escape:html:'UTF-8'}" class="{$tag.class} {if $smarty.foreach.myLoop.last}last_item{elseif $smarty.foreach.myLoop.first}first_item{else}item{/if}">{$tag.name|escape:html:'UTF-8'}</a>
+		<a href="{$link->getPageLink('search', true, NULL, "tag={$tag.name|urlencode}")}" title="{l s='More about' mod='blocktags'} {$tag.name|escape:html:'UTF-8'}" class="{$tag.class} {if $smarty.foreach.myLoop.last}last_item{elseif $smarty.foreach.myLoop.first}first_item{else}item{/if}">{$tag.name|escape:html:'UTF-8'}</a>
 	{/foreach}
 {else}
 	{l s='No tags specified yet' mod='blocktags'}

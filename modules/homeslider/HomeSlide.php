@@ -1,13 +1,13 @@
 <?php
 /*
-* 2007-2011 PrestaShop
+* 2007-2012 PrestaShop
 *
 * NOTICE OF LICENSE
 *
-* This source file is subject to the Open Software License (OSL 3.0)
+* This source file is subject to the Academic Free License (AFL 3.0)
 * that is bundled with this package in the file LICENSE.txt.
 * It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/osl-3.0.php
+* http://opensource.org/licenses/afl-3.0.php
 * If you did not receive a copy of the license and are unable to
 * obtain it through the world-wide-web, please send an email
 * to license@prestashop.com so we can send you a copy immediately.
@@ -19,9 +19,8 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2011 PrestaShop SA
-*  @version  Release: $Revision: 8482 $
-*  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+*  @copyright  2007-2012 PrestaShop SA
+*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
@@ -35,85 +34,61 @@ class HomeSlide extends ObjectModel
 	public $active;
 	public $position;
 
-	protected $fieldsValidate = array(
-		 'active' => 'isunsignedInt',
-		 'position' => 'isunsignedInt'
-	);
-	protected $fieldsRequired = array(
-		 'active',
-		 'position'
-	);
-	protected $fieldsRequiredLang = array('title', 'url', 'legend');
-	protected $fieldsSizeLang = array(
-		 'description' => 4000,
-		 'title' => 255,
-		 'legend' => 255,
-		 'url' => 255,
-		 'image' => 255
-	);
-	protected $fieldsValidateLang = array(
-		 'title' => 'isCleanHtml',
-		 'description' => 'isCleanHtml',
-		 'url' => 'isUrl',
-		 'legend' => 'isCleanHtml',
-		 'image' => 'isCleanHtml'
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'homeslider_slides',
+		'primary' => 'id_homeslider_slides',
+		'multilang' => true,
+		'fields' => array(
+			'active' =>			array('type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true),
+			'position' =>		array('type' => self::TYPE_INT, 'validate' => 'isunsignedInt', 'required' => true),
+
+			// Lang fields
+			'description' =>	array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 4000),
+			'title' =>			array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'required' => true, 'size' => 255),
+			'legend' =>			array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'required' => true, 'size' => 255),
+			'url' =>			array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isUrl', 'required' => true, 'size' => 255),
+			'image' =>			array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255),
+		)
 	);
 
-	protected $tables = array('homeslider_slides, homeslider_slides_lang');
-	protected $table = 'homeslider_slides';
-	protected $identifier = 'id_slide';
-
-	public function getFields()
+	public	function __construct($id_slide = null, $id_lang = null, $id_shop = null, Context $context = null)
 	{
-		$this->validateFields();
-		$fields['id_slide'] = (int)$this->id;
-		$fields['active'] = (int)$this->active;
-		$fields['position'] = (int)$this->position;
-		return $fields;
+		parent::__construct($id_slide, $id_lang, $id_shop);
 	}
 
-	public function getTranslationsFieldsChild()
+	public function add($autodate = true, $null_values = false)
 	{
-		$this->validateFieldsLang();
-		return $this->getTranslationsFields(array(
-			'title',
-			'description',
-			'url',
-			'legend',
-			'image'
-		));
-	}
+		$context = Context::getContext();
+		$id_shop = $context->shop->id;
 
-	public	function __construct($id_slide = NULL, $id_lang = NULL)
-	{
-		parent::__construct($id_slide, $id_lang);
-	}
-
-	public function add($autodate = true, $nullValues = false)
-	{
-
-		$res = parent::add($autodate, $nullValues);
-		$res &= Db::getInstance(_PS_USE_SQL_SLAVE_)->Execute('
-			INSERT INTO `'._DB_PREFIX_.'homeslider` (`id_slide`)
-			VALUES('.(int)$this->id.')'
+		$res = parent::add($autodate, $null_values);
+		$res &= Db::getInstance()->execute('
+			INSERT INTO `'._DB_PREFIX_.'homeslider` (`id_shop`, `id_homeslider_slides`)
+			VALUES('.(int)$id_shop.', '.(int)$this->id.')'
 		);
 		return $res;
 	}
 
 	public function delete()
 	{
-		$res = null;
+		$res = true;
+
 		$images = $this->image;
 		foreach ($images as $image)
 		{
-			if (file_exists(dirname(__FILE__).'/images/'.$image))
-				$res &= @unlink(dirname(__FILE__).'/images/'.$image);
+			if (preg_match('/sample/', $image) === 0)
+				if ($image && file_exists(dirname(__FILE__).'/images/'.$image))
+					$res &= @unlink(dirname(__FILE__).'/images/'.$image);
 		}
 
 		$res &= $this->reOrderPositions();
-		$res &= Db::getInstance(_PS_USE_SQL_SLAVE_)->Execute('
+
+		$res &= Db::getInstance()->execute('
 			DELETE FROM `'._DB_PREFIX_.'homeslider`
-			WHERE `id_slide` = '.(int)$this->id
+			WHERE `id_homeslider_slides` = '.(int)$this->id
 		);
 
 		$res &= parent::delete();
@@ -123,24 +98,24 @@ class HomeSlide extends ObjectModel
 	public function reOrderPositions()
 	{
 		$id_slide = $this->id;
+		$context = Context::getContext();
+		$id_shop = $context->shop->id;
 
-		$max = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
+		$max = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
 			SELECT MAX(hss.`position`) as position
 			FROM `'._DB_PREFIX_.'homeslider_slides` hss, `'._DB_PREFIX_.'homeslider` hs
-			WHERE hss.`id_slide` = hs.`id_slide`'
+			WHERE hss.`id_homeslider_slides` = hs.`id_homeslider_slides` AND hs.`id_shop` = '.(int)$id_shop
 		);
 
 		if ((int)$max == (int)$id_slide)
 			return true;
 
-		$rows = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-			SELECT hss.`position` as position, hss.`id_slide` as id_slide
-			FROM `'._DB_PREFIX_.'homeslider_slides` hss, `'._DB_PREFIX_.'homeslider` hs
-			WHERE hss.`id_slide` = hs.`id_slide` AND hss.`position` > '.(int)$this->position
+		$rows = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+			SELECT hss.`position` as position, hss.`id_homeslider_slides` as id_slide
+			FROM `'._DB_PREFIX_.'homeslider_slides` hss
+			LEFT JOIN `'._DB_PREFIX_.'homeslider` hs ON (hss.`id_homeslider_slides` = hs.`id_homeslider_slides`)
+			WHERE hs.`id_shop` = '.(int)$id_shop.' AND hss.`position` > '.(int)$this->position
 		);
-
-		if (!$rows)
-			return false;
 
 		foreach ($rows as $row)
 		{
@@ -149,6 +124,8 @@ class HomeSlide extends ObjectModel
 			$current_slide->update();
 			unset($current_slide);
 		}
+
 		return true;
 	}
+
 }

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14237 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -32,24 +31,23 @@ class ConnectionsSourceCore extends ObjectModel
 	public $request_uri;
 	public $keywords;
 	public $date_add;
+	public static $uri_max_size = 255;
 
-	protected	$fieldsRequired = array('id_connections', 'date_add');
-	protected	$fieldsValidate = array('id_connections' => 'isUnsignedId', 'http_referer' => 'isAbsoluteUrl', 'request_uri' => 'isUrl', 'keywords' => 'isMessage');
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'connections_source',
+		'primary' => 'id_connections_source',
+		'fields' => array(
+			'id_connections' => array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'http_referer' => 	array('type' => self::TYPE_STRING, 'validate' => 'isAbsoluteUrl'),
+			'request_uri' => 	array('type' => self::TYPE_STRING, 'validate' => 'isUrl'),
+			'keywords' => 		array('type' => self::TYPE_STRING, 'validate' => 'isMessage'),
+			'date_add' => 		array('type' => self::TYPE_DATE, 'validate' => 'isDate', 'required' => true),
+		),
+	);
 
-	protected 	$table = 'connections_source';
-	protected 	$identifier = 'id_connections_source';
-	
-	public function getFields()
-	{
-		parent::validateFields();
-		$fields['id_connections'] = (int)($this->id_connections);
-		$fields['http_referer'] = pSQL($this->http_referer);
-		$fields['request_uri'] = pSQL($this->request_uri);
-		$fields['keywords'] = pSQL($this->keywords);
-		$fields['date_add'] = pSQL($this->date_add);
-		return $fields;
-	}
-	
 	public function add($autodate = true, $nullValues = false)
 	{
 		if ($result = parent::add($autodate, $nullValues))
@@ -57,33 +55,33 @@ class ConnectionsSourceCore extends ObjectModel
 		return $result;
 	}
 	
-	public static function logHttpReferer()
+	public static function logHttpReferer(Cookie $cookie = null)
 	{
-		global $cookie;
-
-		if (!isset($cookie->id_connections) OR !Validate::isUnsignedId($cookie->id_connections))
+		if (!$cookie)
+			$cookie = Context::getContext()->cookie;
+		if (!isset($cookie->id_connections) || !Validate::isUnsignedId($cookie->id_connections))
 			return false;
-		if (!isset($_SERVER['HTTP_REFERER']) AND !Configuration::get('TRACKING_DIRECT_TRAFFIC'))
+		if (!isset($_SERVER['HTTP_REFERER']) && !Configuration::get('TRACKING_DIRECT_TRAFFIC'))
 			return false;
 		
 		$source = new ConnectionsSource();
-		if (isset($_SERVER['HTTP_REFERER']) AND Validate::isAbsoluteUrl($_SERVER['HTTP_REFERER']))
+		if (isset($_SERVER['HTTP_REFERER']) && Validate::isAbsoluteUrl($_SERVER['HTTP_REFERER']))
 		{
 			$parsed = parse_url($_SERVER['HTTP_REFERER']);
 			$parsed_host = parse_url(Tools::getProtocol().Tools::getHttpHost(false, false).__PS_BASE_URI__);
 			if ((preg_replace('/^www./', '', $parsed['host']) == preg_replace('/^www./', '', Tools::getHttpHost(false, false))) 
-				AND !strncmp($parsed['path'], $parsed_host['path'], strlen(__PS_BASE_URI__)))
+				&& !strncmp($parsed['path'], $parsed_host['path'], strlen(__PS_BASE_URI__)))
 				return false;
 			if (Validate::isAbsoluteUrl(strval($_SERVER['HTTP_REFERER'])))
 			{
-				$source->http_referer = strval($_SERVER['HTTP_REFERER']);
+				$source->http_referer = substr(strval($_SERVER['HTTP_REFERER']), 0, ConnectionsSource::$uri_max_size);
 				$source->keywords = trim(SearchEngine::getKeywords(strval($_SERVER['HTTP_REFERER'])));
 				if (!Validate::isMessage($source->keywords))
 					return false;
 			}
 		}
 		
-		$source->id_connections = (int)($cookie->id_connections);
+		$source->id_connections = (int)$cookie->id_connections;
 		$source->request_uri = Tools::getHttpHost(false, false);
 		if (isset($_SERVER['REDIRECT_URL']))
 			$source->request_uri .= strval($_SERVER['REDIRECT_URL']);
@@ -91,12 +89,13 @@ class ConnectionsSourceCore extends ObjectModel
 			$source->request_uri .= strval($_SERVER['REQUEST_URI']);
 		if (!Validate::isUrl($source->request_uri))
 			$source->request_uri = '';
+		$source->request_uri = substr($source->request_uri, 0, ConnectionsSource::$uri_max_size);
 		return $source->add();
 	}
 	
 	public static function getOrderSources($id_order)
 	{
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
 		SELECT cos.http_referer, cos.request_uri, cos.keywords, cos.date_add
 		FROM '._DB_PREFIX_.'orders o
 		INNER JOIN '._DB_PREFIX_.'guest g ON g.id_customer = o.id_customer
@@ -106,5 +105,3 @@ class ConnectionsSourceCore extends ObjectModel
 		ORDER BY cos.date_add DESC');
 	}
 }
-
-

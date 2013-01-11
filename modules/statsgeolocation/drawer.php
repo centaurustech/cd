@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -70,13 +69,13 @@ function drawCircles($image)
 
 function getTotalElements()
 {
-	$result = Db::getInstance()->ExecuteS('SELECT COUNT(`id_address`) as total FROM `'._DB_PREFIX_.'address` WHERE deleted = 0 AND id_customer IS NOT NULL AND id_customer != 0');
+	$result = Db::getInstance()->executeS('SELECT COUNT(`id_address`) as total FROM `'._DB_PREFIX_.'address` WHERE deleted = 0 AND id_customer IS NOT NULL AND id_customer != 0');
 	return (isset($result[0]) ? $result[0]['total'] : 0);
 }
 	
 function getCoords()
 {
-	return (Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('SELECT `x`, `y`, COUNT(`id_address`) AS total 
+	return (Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('SELECT `x`, `y`, COUNT(`id_address`) AS total 
 								FROM `'._DB_PREFIX_.'address` a
 								LEFT JOIN `'._DB_PREFIX_.'location_coords` lc ON lc.`id_country`=a.`id_country`
 								WHERE deleted = 0 AND id_customer IS NOT NULL AND id_customer != 0

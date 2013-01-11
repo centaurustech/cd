@@ -20,26 +20,18 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14007 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-include(dirname(__FILE__).'/config/config.inc.php');
-include(dirname(__FILE__).'/init.php');
+/**
+ * This file will be removed in 1.6
+ * You have to use index.php?controller=page_name instead of this page
+ *
+ * @deprecated 1.5.0
+ */
 
-$cookie = new Cookie('ps');
-if (!$cookie->isLogged() AND !Tools::getValue('secure_key'))
-	Tools::redirect('authentication.php?back=pdf-invoice.php');
-if (!(int)(Configuration::get('PS_INVOICE')))
-	die(Tools::displayError('Invoices are disabled in this shop.'));
-if (isset($_GET['id_order']) AND Validate::isUnsignedId($_GET['id_order']))
-	$order = new Order((int)($_GET['id_order']));
-if (!isset($order) OR !Validate::isLoadedObject($order))
-    die(Tools::displayError('Invoice not found'));
-elseif ((isset($cookie->id_customer) AND $order->id_customer != $cookie->id_customer) OR (Tools::isSubmit('secure_key') AND $order->secure_key != Tools::getValue('secure_key')))
-    die(Tools::displayError('Invoice not found'));
-elseif (!OrderState::invoiceAvailable($order->getCurrentState()) AND !$order->invoice_number)
-	die(Tools::displayError('No invoice available'));
-else
-	PDF::invoice($order);
+include(dirname(__FILE__).'/config/config.inc.php');
+Tools::displayFileAsDeprecated();
+
+Tools::redirect('index.php?controller=pdf-invoice'.($_REQUEST ? '&'.http_build_query($_REQUEST, '', '&') : ''), __PS_BASE_URI__, null, 'HTTP/1.1 301 Moved Permanently');

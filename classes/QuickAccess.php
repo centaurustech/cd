@@ -20,51 +20,37 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16480 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class QuickAccessCore extends ObjectModel
 {
- 	/** @var mixed Name */
-	public 		$name;
-	
-	/** @var string Link */
-	public 		$link;
-	
-	/** @var boolean New windows or not */
-	public 		$new_window;
-	
- 	protected 	$fieldsRequired = array('link', 'new_window');
- 	protected 	$fieldsSize = array('link' => 128);
- 	protected 	$fieldsValidate = array('link' => 'isUrl', 'new_window' => 'isBool');
- 	protected 	$fieldsRequiredLang = array('name');
- 	protected 	$fieldsSizeLang = array('name' => 32);
- 	protected 	$fieldsValidateLang = array('name' => 'isGenericName');
+ 	/** @var string Name */
+	public $name;
 
-	protected 	$table = 'quick_access';
-	protected 	$identifier = 'id_quick_access';
-		
-	public function getFields()
-	{
-		parent::validateFields();
-		$fields['link'] = pSQL($this->link);
-		$fields['new_window'] = (int)($this->new_window);
-		return $fields;
-	}
-	
+	/** @var string Link */
+	public $link;
+
+	/** @var boolean New windows or not */
+	public $new_window;
+
 	/**
-	* Check then return multilingual fields for database interaction
-	*
-	* @return array Multilingual fields
-	*/
-	public function getTranslationsFieldsChild()
-	{
-		parent::validateFieldsLang();
-		return parent::getTranslationsFields(array('name'));
-	}
-	
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'quick_access',
+		'primary' => 'id_quick_access',
+		'multilang' => true,
+		'fields' => array(
+			'link' => 		array('type' => self::TYPE_STRING, 'validate' => 'isUrl', 'required' => true, 'size' => 128),
+			'new_window' => array('type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true),
+
+			// Lang fields
+			'name' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 32),
+		),
+	);
+
 	/**
 	* Get all available quick_accesses
 	*
@@ -72,10 +58,10 @@ class QuickAccessCore extends ObjectModel
 	*/
 	public static function getQuickAccesses($id_lang)
 	{
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
 		SELECT *
 		FROM `'._DB_PREFIX_.'quick_access` qa
-		LEFT JOIN `'._DB_PREFIX_.'quick_access_lang` qal ON (qa.`id_quick_access` = qal.`id_quick_access` AND qal.`id_lang` = '.(int)($id_lang).')
+		LEFT JOIN `'._DB_PREFIX_.'quick_access_lang` qal ON (qa.`id_quick_access` = qal.`id_quick_access` AND qal.`id_lang` = '.(int)$id_lang.')
 		ORDER BY `name` ASC');
 	}
 }

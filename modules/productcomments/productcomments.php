@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16894 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -45,39 +44,66 @@ class ProductComments extends Module
 		$this->version = '2.3';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
+		$this->secure_key = Tools::encrypt($this->name);
 
 		parent::__construct();
 
 		$this->displayName = $this->l('Product Comments');
-		$this->description = $this->l('Allow users to post comment about a product.');
+		$this->description = $this->l('Allows users to post reviews.');
 	}
 
 	public function install()
 	{
 		if (!file_exists(dirname(__FILE__).'/'.self::INSTALL_SQL_FILE))
 			return false;
-		elseif (!$sql = file_get_contents(dirname(__FILE__).'/'.self::INSTALL_SQL_FILE))
+		else if (!$sql = file_get_contents(dirname(__FILE__).'/'.self::INSTALL_SQL_FILE))
 			return false;
 		$sql = str_replace(array('PREFIX_', 'ENGINE_TYPE'), array(_DB_PREFIX_, _MYSQL_ENGINE_), $sql);
 		$sql = preg_split("/;\s*[\r\n]+/", trim($sql));
 
-		foreach ($sql AS $query)
-			if (!Db::getInstance()->Execute(trim($query)))
+		foreach ($sql as $query)
+			if (!Db::getInstance()->execute(trim($query)))
 				return false;
-		if (parent::install() == false OR $this->registerHook('productTab') == false
-			OR $this->registerHook('extraProductComparison') == false OR $this->registerHook('productTabContent') == false
-			OR $this->registerHook('header') == false OR !Configuration::updateValue('PRODUCT_COMMENTS_MINIMAL_TIME', 30)
-			OR !Configuration::updateValue('PRODUCT_COMMENTS_ALLOW_GUESTS', 0)
-			OR !Configuration::updateValue('PRODUCT_COMMENTS_MODERATE', 1))
-			return false;
+		if (parent::install() == false ||
+			!$this->registerHook('productTab') ||
+			!$this->registerHook('extraProductComparison') ||
+			!$this->registerHook('productTabContent') ||
+			!$this->registerHook('header') ||
+			!$this->registerHook('productOutOfStock') ||
+			!Configuration::updateValue('PRODUCT_COMMENTS_MINIMAL_TIME', 30) ||
+			!Configuration::updateValue('PRODUCT_COMMENTS_ALLOW_GUESTS', 0) ||
+			!Configuration::updateValue('PRODUCT_COMMENTS_MODERATE', 1))
+				return false;
 		return true;
 	}
 
-	function uninstall()
+	public function uninstall()
 	{
-		if (!parent::uninstall() OR !Configuration::deleteByName('PRODUCT_COMMENTS_MODERATE') OR !Configuration::deleteByName('PRODUCT_COMMENTS_ALLOW_GUESTS') OR !Configuration::deleteByName('PRODUCT_COMMENTS_MINIMAL_TIME'))
-			return false;
+		if (!parent::uninstall() || !$this->deleteTables() ||
+			!Configuration::deleteByName('PRODUCT_COMMENTS_MODERATE') ||
+			!Configuration::deleteByName('PRODUCT_COMMENTS_ALLOW_GUESTS') ||
+			!Configuration::deleteByName('PRODUCT_COMMENTS_MINIMAL_TIME') ||
+			!$this->unregisterHook('extraProductComparison') ||
+			!$this->unregisterHook('productOutOfStock') ||
+			!$this->unregisterHook('productTabContent') ||
+			!$this->unregisterHook('header') ||
+			!$this->unregisterHook('productTab'))
+				return false;
 		return true;
+	}
+
+	public function deleteTables()
+	{
+		return Db::getInstance()->execute('
+			DROP TABLE IF EXISTS
+			`'._DB_PREFIX_.'product_comment`,
+			`'._DB_PREFIX_.'product_comment_criterion`,
+			`'._DB_PREFIX_.'product_comment_criterion_product`,
+			`'._DB_PREFIX_.'product_comment_criterion_lang`,
+			`'._DB_PREFIX_.'product_comment_criterion_category`,
+			`'._DB_PREFIX_.'product_comment_grade`,
+			`'._DB_PREFIX_.'product_comment_usefulness`,
+			`'._DB_PREFIX_.'product_comment_report`');
 	}
 
 	protected function _postProcess()
@@ -87,14 +113,14 @@ class ProductComments extends Module
 			Configuration::updateValue('PRODUCT_COMMENTS_MODERATE', (int)Tools::getValue('moderate'));
 			Configuration::updateValue('PRODUCT_COMMENTS_ALLOW_GUESTS', (int)Tools::getValue('allow_guest'));
 			Configuration::updateValue('PRODUCT_COMMENTS_MINIMAL_TIME', (int)Tools::getValue('product_comments_minimal_time'));
-			$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.$this->l('Settings updated').'</div>';
+			$this->_html .= '<div class="conf confirm">'.$this->l('Settings updated').'</div>';
 		}
-		if ($id_criterion =  (int)Tools::getValue('deleteCriterion'))
+		if ($id_criterion = (int)Tools::getValue('deleteCriterion'))
 		{
 			$productCommentCriterion = new ProductCommentCriterion((int)$id_criterion);
 			if ($productCommentCriterion->id)
 				if ($productCommentCriterion->delete())
-					$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.$this->l('Criterion deleted').'</div>';
+					$this->_html .= '<div class="conf confirm">'.$this->l('Criterion deleted').'</div>';
 		}
 	}
 
@@ -107,8 +133,10 @@ class ProductComments extends Module
 		$this->_html = '<h2>'.$this->displayName.'</h2>';
 		$this->_postProcess();
 		$this->_checkModerateComment();
+		$this->_checkReportedComment();
 		$this->_checkCriterion();
 		$this->_updateApplicationCriterion();
+		$this->_checkDeleteComment();
 
 		return $this->_html.$this->_displayForm();
 	}
@@ -116,7 +144,7 @@ class ProductComments extends Module
 	private function _setBaseUrl()
 	{
 		$this->_baseUrl = 'index.php?';
-		foreach ($_GET AS $k => $value)
+		foreach ($_GET as $k => $value)
 			if (!in_array($k, array('deleteCriterion', 'editCriterion')))
 				$this->_baseUrl .= $k.'='.$value.'&';
 		$this->_baseUrl = rtrim($this->_baseUrl, '&');
@@ -125,17 +153,17 @@ class ProductComments extends Module
 	private function _checkModerateComment()
 	{
 		$action = Tools::getValue('action');
-		if (empty($action) === false &&
-			(int)(Configuration::get('PRODUCT_COMMENTS_MODERATE')))
+		if (empty($action) === false && (int)Configuration::get('PRODUCT_COMMENTS_MODERATE'))
 		{
 			$product_comments = Tools::getValue('id_product_comment');
-			if (sizeof($product_comments))
+
+			if (count($product_comments))
 			{
 				require_once(dirname(__FILE__).'/ProductComment.php');
 				switch ($action)
 				{
 					case 'accept':
-						foreach ($product_comments AS $id_product_comment)
+						foreach ($product_comments as $id_product_comment)
 						{
 							if (!$id_product_comment)
 								continue;
@@ -143,8 +171,9 @@ class ProductComments extends Module
 							$comment->validate();
 						}
 						break;
+
 					case 'delete':
-						foreach ($product_comments AS $id_product_comment)
+						foreach ($product_comments as $id_product_comment)
 						{
 							if (!$id_product_comment)
 								continue;
@@ -153,24 +182,66 @@ class ProductComments extends Module
 							ProductComment::deleteGrades((int)$id_product_comment);
 						}
 						break;
+
 					default:
 						;
 				}
 			}
 		}
 	}
+
+	private function _checkReportedComment()
+	{
+		$action = Tools::getValue('action');
+		if (empty($action) === false)
+		{
+			$product_comments = Tools::getValue('id_product_comment');
+
+			if (count($product_comments))
+			{
+				require_once(dirname(__FILE__).'/ProductComment.php');
+				switch ($action)
+				{
+					case 'accept':
+						foreach ($product_comments as $id_product_comment)
+						{
+							if (!$id_product_comment)
+								continue;
+							$comment = new ProductComment((int)$id_product_comment);
+							$comment->validate();
+							ProductComment::deleteReports((int)$id_product_comment);
+						}
+						break;
+					case 'delete':
+						foreach ($product_comments as $id_product_comment)
+						{
+							if (!$id_product_comment)
+								continue;
+							$comment = new ProductComment((int)$id_product_comment);
+							$comment->delete();
+							ProductComment::deleteGrades((int)$id_product_comment);
+							ProductComment::deleteReports((int)$id_product_comment);
+							ProductComment::deleteUsefulness((int)$id_product_comment);
+						}
+						break;
+					default:
+						;
+				}
+			}
+		}
+	}
+
 	private function _checkCriterion()
 	{
 		$action_criterion = Tools::getValue('criterion_action');
 		$name = Tools::getValue('criterion');
 		if (Tools::isSubmit('submitAddCriterion'))
 		{
-			global $cookie;
 			require_once(dirname(__FILE__).'/ProductCommentCriterion.php');
 			$languages = Language::getLanguages();
 			$id_criterion = (int)Tools::getValue('id_product_comment_criterion');
 			$productCommentCriterion = new ProductCommentCriterion((int)$id_criterion);
-			foreach ($languages AS $lang)
+			foreach ($languages as $lang)
 				$productCommentCriterion->name[(int)$lang['id_lang']] = Tools::getValue('criterion_'.(int)$lang['id_lang']);
 
 			// Check default language criterion name
@@ -185,9 +256,9 @@ class ProductComments extends Module
 			$productCommentCriterion->active = (int)Tools::getValue('criterion_active');
 
 			if ($productCommentCriterion->save())
-				$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.(Tools::getValue('editCriterion') ? $this->l('Criterion updated') : $this->l('Criterion added')).'</div>';
+				$this->_html .= '<div class="conf confirm">'.(Tools::getValue('editCriterion') ? $this->l('Criterion updated') : $this->l('Criterion added')).'</div>';
 		}
-		elseif (!empty($action_criterion) AND empty($name))
+		else if (!empty($action_criterion) && empty($name))
 		{
 			$id_product_comment_criterion = Tools::getValue('id_product_comment_criterion');
 			require_once(dirname(__FILE__).'/ProductCommentCriterion.php');
@@ -221,29 +292,32 @@ class ProductComments extends Module
 				{
 					$productCommentCriterion->deleteCategories();
 					if ($categories = Tools::getValue('id_product'))
-						if (sizeof($categories))
-							foreach ($categories AS $id_category)
+						if (count($categories))
+							foreach ($categories as $id_category)
 								$productCommentCriterion->addCategory((int)$id_category);
 				}
-				elseif ($productCommentCriterion->id_product_comment_criterion_type == 3)
+				else if ($productCommentCriterion->id_product_comment_criterion_type == 3)
 				{
 					$productCommentCriterion->deleteProducts();
 					if ($products = Tools::getValue('id_product'))
-						if (sizeof($products))
-							foreach ($products AS $product)
+						if (count($products))
+							foreach ($products as $product)
 								$productCommentCriterion->addProduct((int)$product);
 				}
 			}
 
-			$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.$this->l('Settings updated').'</div>';
+			$this->_html .= '<div class="conf confirm">'.$this->l('Settings updated').'</div>';
 		}
 	}
 
 	private function _displayForm()
 	{
 		$this->_displayFormModerate();
+		$this->_displayFormReported();
 		$this->_displayFormConfigurationCriterion();
 		$this->_displayFormApplicationCriterion();
+		$this->_displayFormDelete();
+
 		return $this->_html;
 	}
 
@@ -252,7 +326,7 @@ class ProductComments extends Module
 		$this->_html = '<script type="text/javascript" src="'.$this->_path.'js/moderate.js"></script>
 			<fieldset class="width2">
 				<legend><img src="../img/admin/cog.gif" alt="" title="" />'.$this->l('Configuration').'</legend>
-				<form action="'.$this->_baseUrl.'" method="post" name="comment_configuration">
+				<form action="'.Tools::safeOutput($this->_baseUrl).'" method="post" name="comment_configuration">
 					<label style="padding-top: 0;">'.$this->l('All comments must be validated by an employee').'</label>
 					<div class="margin-form">
 						<input type="radio" name="moderate" id="moderate_on" value="1" '.(Configuration::get('PRODUCT_COMMENTS_MODERATE') ? 'checked="checked" ' : '').'/>
@@ -282,14 +356,63 @@ class ProductComments extends Module
 			<br />
 			<fieldset class="width2">
 				<legend><img src="'.$this->_path.'img/comments_delete.png" alt="" title="" />'.$this->l('Moderate Comments').'</legend>';
-		if (Configuration::get('PRODUCT_COMMENTS_MODERATE'))
-		{
-			require_once(dirname(__FILE__).'/ProductComment.php');
-			$comments = ProductComment::getByValidate();
-			if (sizeof($comments))
+			if (Configuration::get('PRODUCT_COMMENTS_MODERATE'))
 			{
-				$this->_html .= '
-					<form action="'.$this->_baseUrl.'" method="post" name="comment_form">
+				require_once(dirname(__FILE__).'/ProductComment.php');
+				$comments = ProductComment::getByValidate();
+				if (count($comments))
+				{
+					$this->_html .= '
+					<form action="'.Tools::safeOutput($this->_baseUrl).'" method="post" name="comment_form">
+					<input type="hidden" name="id_product_comment[]" id="id_product_comment" />
+					<input type="hidden" name="action" id="action" />
+					<br /><table class="table" border="0" cellspacing="0" cellpadding="0">
+					<thead>
+					<tr>
+						<th><input class="noborder" type="checkbox" onclick="checkDelBoxes(this.form, \'id_product_comment[]\', this.checked)" /></th>
+						<th style="width:150px;">'.$this->l('Author').'</th>
+						<th style="width:550px;">'.$this->l('Comment').'</th>
+						<th style="width:150px;">'.$this->l('Product name').'</th>
+						<th style="width:30px;">'.$this->l('Actions').'</th>
+					</tr>
+					</thead>
+					<tbody>';
+					foreach ($comments as $comment)
+						$this->_html .= '<tr>
+						<td><input class="noborder" type="checkbox" value="'.$comment['id_product_comment'].'" name="id_product_comment[]" /></td>
+						<td>'.htmlspecialchars($comment['customer_name'], ENT_COMPAT, 'UTF-8').'.</td>
+						<td>'.htmlspecialchars($comment['content'], ENT_COMPAT, 'UTF-8').'</td>
+						<td>'.$comment['id_product'].' - '.htmlspecialchars($comment['name'], ENT_COMPAT, 'UTF-8').'</td>
+						<td><a href="javascript:;" onclick="acceptComment(\''.(int)($comment['id_product_comment']).'\');"><img src="'.$this->_path.'img/accept.png" alt="'.$this->l('Accept').'" title="'.$this->l('Accept').'" /></a>
+							<a href="javascript:;" onclick="deleteComment(\''.(int)($comment['id_product_comment']).'\');"><img src="'.$this->_path.'img/delete.png" alt="'.$this->l('Delete').'" title="'.$this->l('Delete').'" /></a></td>
+						</tr>';
+						$this->_html .= '
+						<tr>
+							<td colspan="4" style="font-weight:bold;text-align:right">'.$this->l('Selection:').'</td>
+							<td><a href="javascript:;" onclick="acceptComment(0);"><img src="'.$this->_path.'img/accept.png" alt="'.$this->l('Accept').'" title="'.$this->l('Accept').'" /></a>
+							<a href="javascript:;" onclick="deleteComment(0);"><img src="'.$this->_path.'img/delete.png" alt="'.$this->l('Delete').'" title="'.$this->l('Delete').'" /></a></td>
+						</tr>
+						</tbody>
+					</table>
+					</form>';
+				}
+				else
+					$this->_html .= $this->l('No comments to validate at this time.');
+			}
+		$this->_html .= '</fieldset><br />';
+	}
+
+	private function _displayFormReported()
+	{
+		$this->_html .= '<fieldset class="width2">
+				<legend><img src="'.$this->_path.'img/comments_delete.png" alt="" title="" />'.$this->l('Reported Comments').'</legend>';
+
+				require_once(dirname(__FILE__).'/ProductComment.php');
+				$comments = ProductComment::getReportedComments();
+				if (count($comments))
+				{
+					$this->_html .= '
+					<form action="'.Tools::safeOutput($this->_baseUrl).'" method="post" name="comment_form">
 					<input type="hidden" name="id_product_comment[]" id="id_product_comment" />
 					<input type="hidden" name="action" id="action" />
 					<br /><table class="table" border="0" cellspacing="0" cellpadding="0">
@@ -303,8 +426,8 @@ class ProductComments extends Module
 					</tr>
 					</thead>
 					<tbody>';
-				foreach ($comments AS $comment)
-					$this->_html .= '<tr>
+					foreach ($comments as $comment)
+						$this->_html .= '<tr>
 						<td><input class="noborder" type="checkbox" value="'.$comment['id_product_comment'].'" name="id_product_comment[]" /></td>
 						<td>'.htmlspecialchars($comment['customer_name'], ENT_COMPAT, 'UTF-8').'.</td>
 						<td>'.htmlspecialchars($comment['content'], ENT_COMPAT, 'UTF-8').'</td>
@@ -312,7 +435,7 @@ class ProductComments extends Module
 						<td><a href="javascript:;" onclick="acceptComment(\''.(int)($comment['id_product_comment']).'\');"><img src="'.$this->_path.'img/accept.png" alt="'.$this->l('Accept').'" title="'.$this->l('Accept').'" /></a>
 							<a href="javascript:;" onclick="deleteComment(\''.(int)($comment['id_product_comment']).'\');"><img src="'.$this->_path.'img/delete.png" alt="'.$this->l('Delete').'" title="'.$this->l('Delete').'" /></a></td>
 						</tr>';
-				$this->_html .= '
+						$this->_html .= '
 						<tr>
 							<td colspan="4" style="font-weight:bold;text-align:right">'.$this->l('Selection:').'</td>
 							<td><a href="javascript:;" onclick="acceptComment(0);"><img src="'.$this->_path.'img/accept.png" alt="'.$this->l('Accept').'" title="'.$this->l('Accept').'" /></a>
@@ -321,17 +444,14 @@ class ProductComments extends Module
 						</tbody>
 					</table>
 					</form>';
-			}
-			else
-				$this->_html .= $this->l('No comments to validate at this time.');
-		}
+				}
+				else
+					$this->_html .= $this->l('No reported comments at this time.');
 		$this->_html .= '</fieldset><br />';
 	}
 
 	private function _displayFormConfigurationCriterion()
 	{
-		global $cookie;
-
 		$langs = Language::getLanguages(false);
 		$id_lang_default = (int)Configuration::get('PS_LANG_DEFAULT');
 
@@ -340,28 +460,28 @@ class ProductComments extends Module
 		$languageIds = 'criterion';
 		$this->_html .= '
 		<fieldset class="width2">
-			<legend><img src="'.$this->_path.'img/note.png" alt="" />'.$this->l('Add a new comment criterion').'</legend>
+			<legend><img src="'.Tools::safeOutput($this->_path).'img/note.png" alt="" />'.$this->l('Add a new comment criterion').'</legend>
 				<p style="margin-bottom: 20px;">'.$this->l('You can define several criterions to help your customers during their review. For instance: efficiency, lightness, design.').'<br />
 				<br />'.$this->l('You can add a new criterion below:').'</p>
-				<form action="'.$this->_baseUrl.'" method="post" name="criterion_form">
+				<form action="'.Tools::safeOutput($this->_baseUrl).'" method="post" name="criterion_form">
 				<label>'.$this->l('Name').'</label>
 				<div class="margin-form">
 				<input type="hidden" name="id_product_comment_criterion" value="'.(int)$criterion->id.'" />';
-		foreach ($langs AS $lang)
-			$this->_html .= '
+				foreach ($langs as $lang)
+					$this->_html .= '
 					<div id="criterion_'.(int)$lang['id_lang'].'" style="display: '.($lang['id_lang'] == $id_lang_default ? 'block' : 'none').'; float: left;">
 						<input value="'.$criterion->name[(int)$lang['id_lang']].'" type="text" class="text" name="criterion_'.(int)$lang['id_lang'].'" />
 					</div>';
-		$this->_html .= $this->displayFlags($langs, (int)$id_lang_default, $languageIds, 'criterion', true);
-		$this->_html .= '
+				$this->_html .= $this->displayFlags($langs, (int)$id_lang_default, $languageIds, 'criterion', true);
+				$this->_html .= '
 				</div>
 				<div class="clear">&nbsp;</div>
 				<label for="criterion_type">'.$this->l('Apply to').'</label>
 				<div class="margin-form">
 					<select name="criterion_type">';
-		foreach ($this->_productCommentsCriterionTypes AS $k => $type)
-			$this->_html.= '<option value="'.(int)$k.'" '.($k == $criterion->id_product_comment_criterion_type ? 'selected="selected"' : '').'>'.$type.'</option>';
-		$this->_html .= '</select>
+				foreach ($this->_productCommentsCriterionTypes as $k => $type)
+					$this->_html .= '<option value="'.(int)$k.'" '.($k == $criterion->id_product_comment_criterion_type ? 'selected="selected"' : '').'>'.$type.'</option>';
+				$this->_html .= '</select>
 				</div>
 				<label>'.$this->l('Active').'</label>
 				<div class="margin-form">
@@ -374,11 +494,11 @@ class ProductComments extends Module
 					<input type="submit" name="submitAddCriterion" value="'.(Tools::getValue('editCriterion') ? $this->l('Modify this criterion') : $this->l('Add this criterion')).'" class="button" />
 				</div>
 				</form>';
-		require_once(dirname(__FILE__).'/ProductCommentCriterion.php');
-		$criterions = ProductCommentCriterion::getCriterions((int)$cookie->id_lang);
-		if (sizeof($criterions))
-		{
-			$this->_html.= '<br />
+				require_once(dirname(__FILE__).'/ProductCommentCriterion.php');
+				$criterions = ProductCommentCriterion::getCriterions($this->context->language->id);
+				if (count($criterions))
+				{
+						$this->_html .= '<br />
 						<table class="table">
 						<thead>
 						<tr>
@@ -390,27 +510,25 @@ class ProductComments extends Module
 						</thead>
 						<tbody>';
 
-			foreach ($criterions AS $criterion)
-			{
-				$this->_html .= '<tr>
+						foreach ($criterions as $criterion)
+						{
+							$this->_html .= '<tr>
 							<td>'.$criterion['name'].'</td>
 							<td>'.$this->_productCommentsCriterionTypes[(int)$criterion['id_product_comment_criterion_type']].'</td>
 							<td style="text-align:center;"><img src="../img/admin/'.($criterion['active'] ? 'enabled' : 'disabled').'.gif" /></td>
-							<td><a href="'.$this->_baseUrl.'&editCriterion='.(int)$criterion['id_product_comment_criterion'].'"><img src="../img/admin/edit.gif" alt="'.$this->l('Edit').'" /></a>
-								<a href="'.$this->_baseUrl.'&deleteCriterion='.(int)$criterion['id_product_comment_criterion'].'"><img src="../img/admin/delete.gif" alt="'.$this->l('Delete').'" /></a></td><tr>';
-			}
-			$this->_html .= '</tbody></table>';
-		}
-		$this->_html .= '</fieldset><br />';
+							<td><a href="'.Tools::safeOutput($this->_baseUrl).'&editCriterion='.(int)$criterion['id_product_comment_criterion'].'"><img src="../img/admin/edit.gif" alt="'.$this->l('Edit').'" /></a>
+								<a href="'.Tools::safeOutput($this->_baseUrl).'&deleteCriterion='.(int)$criterion['id_product_comment_criterion'].'"><img src="../img/admin/delete.gif" alt="'.$this->l('Delete').'" /></a></td><tr>';
+						}
+					$this->_html .= '</tbody></table>';
+				}
+			$this->_html .= '</fieldset><br />';
 	}
 
 	private function _displayFormApplicationCriterion()
 	{
-		global $cookie;
-
 		include_once(dirname(__FILE__).'/ProductCommentCriterion.php');
 
-		$criterions = ProductCommentCriterion::getCriterions((int)$cookie->id_lang, false, true);
+		$criterions = ProductCommentCriterion::getCriterions($this->context->language->id, false, true);
 		$id_criterion = (int)Tools::getValue('updateCriterion');
 
 		if ($id_criterion)
@@ -418,41 +536,42 @@ class ProductComments extends Module
 			$criterion = new ProductCommentCriterion((int)$id_criterion);
 			if ($criterion->id_product_comment_criterion_type == 2)
 			{
-				$categories = Category::getSimpleCategories((int)$cookie->id_lang);
+				$categories = Category::getSimpleCategories($this->context->language->id);
 				$criterion_categories = $criterion->getCategories();
 			}
-			elseif ($criterion->id_product_comment_criterion_type == 3)
+			else if ($criterion->id_product_comment_criterion_type == 3)
 			{
 				$criterion_products = $criterion->getProducts();
-				$products = Product::getSimpleProducts((int)$cookie->id_lang);
+				$products = Product::getSimpleProducts($this->context->language->id);
 			}
 		}
 
-		foreach ($criterions AS $key => $foo)
+		foreach ($criterions as $key => $foo)
 			if ($foo['id_product_comment_criterion_type'] == 1)
 				unset($criterions[$key]);
 
-		if (sizeof($criterions))
+		if (count($criterions))
 		{
 			$this->_html .= '
 			<fieldset class="width2">
-				<legend><img src="'.$this->_path.'img/note_go.png" alt="" title="" />'.$this->l('Manage scope of criteria').'</legend>
+				<legend><img src="'.$this->_path.'img/note_go.png" alt="" title="" />'.$this->l('Manage criterions scope').'</legend>
 				<p style="margin-bottom: 15px;">'.$this->l('Only criterions restricted to categories or products can be configured below:').'</p>
-				<form action="'.$this->_baseUrl.'" method="post" name="product_criterion_form">
+				<form action="'.Tools::safeOutput($this->_baseUrl).'" method="post" name="product_criterion_form">
 					<label>'.$this->l('Criterion').'</label>
 					<div class="margin-form">
-						<select name="id_product_comment_criterion" id="id_product_comment_criterion" onchange="window.location=\''.$this->_baseUrl.'&updateCriterion=\'+$(\'#id_product_comment_criterion option:selected\').val()">
+">
+						<select name="id_product_comment_criterion" id="id_product_comment_criterion" onchange="window.location=\''.Tools::safeOutput($this->_baseUrl).'&updateCriterion=\'+$(\'#id_product_comment_criterion option:selected\').val()">
 							<option value="--">-- '.$this->l('Choose a criterion').' --</option>';
-			foreach ($criterions AS $foo)
-				$this->_html .= '<option value="'.(int)($foo['id_product_comment_criterion']).'" '.($foo['id_product_comment_criterion'] == $id_criterion ? 'selected="selected"' : '').'>'.$foo['name'].'</option>';
+						foreach ($criterions as $foo)
+								$this->_html .= '<option value="'.(int)($foo['id_product_comment_criterion']).'" '.($foo['id_product_comment_criterion'] == $id_criterion ? 'selected="selected"' : '').'>'.$foo['name'].'</option>';
 			$this->_html .= '</select>
 					</div>
 				</form>';
 
-			if ($id_criterion AND $criterion->id_product_comment_criterion_type != 1)
+			if ($id_criterion && $criterion->id_product_comment_criterion_type != 1)
 			{
 				$this->_html .='<label for="id_product_comment_criterion">'.($criterion->id_product_comment_criterion_type == 3 ? $this->l('Products') : $this->l('Categories')).'</label>
-					<form action="'.$this->_baseUrl.'" method="post" name="comment_form">
+					<form action="'.Tools::safeOutput($this->_baseUrl).'" method="post" name="comment_form">
 						<div id="product_criterions" class="margin-form">
 							<input type="hidden" name="id_criterion" id="id_criterion" value="'.(int)$id_criterion.'" />
 							<br /><table class="table" border="0" cellspacing="0" cellpadding="0">
@@ -466,12 +585,12 @@ class ProductComments extends Module
 							<tbody>';
 
 				if ($criterion->id_product_comment_criterion_type == 3)
-					foreach ($products AS $product)
+					foreach ($products as $product)
 						$this->_html .='<tr><td><input class="noborder" type="checkbox" value="'.(int)$product['id_product'].'" name="id_product[]" '.(in_array($product['id_product'], $criterion_products) ? 'checked="checked"' : '').' /></td>
 											<td>'.(int)$product['id_product'].'</td><td>'.$product['name'].'</td></tr>';
-				elseif ($criterion->id_product_comment_criterion_type == 2)
-					foreach ($categories AS $category)
-					$this->_html .='<tr><td><input class="noborder" type="checkbox" value="'.(int)$category['id_category'].'" name="id_product[]" '.(in_array($category['id_category'], $criterion_categories) ? 'checked="checked"' : '').' /></td>
+				else if ($criterion->id_product_comment_criterion_type == 2)
+					foreach ($categories as $category)
+						$this->_html .='<tr><td><input class="noborder" type="checkbox" value="'.(int)$category['id_category'].'" name="id_product[]" '.(in_array($category['id_category'], $criterion_categories) ? 'checked="checked"' : '').' /></td>
 											<td>'.(int)$category['id_category'].'</td><td>'.$category['name'].'</td></tr>';
 				$this->_html .='</tbody>
 						</table>
@@ -486,142 +605,192 @@ class ProductComments extends Module
 		}
 	}
 
+	private function _displayFormDelete()
+	{
+		$this->_html .= '
+			<fieldset class="width2">
+				<legend><img src="'.$this->_path.'img/comments_delete.png" alt="" title="" />'.$this->l('Manage Comments').'</legend>';
+
+				require_once(dirname(__FILE__).'/ProductComment.php');
+				$comments = ProductComment::getAll();
+				if (count($comments))
+				{
+					$this->_html .= '
+					<form action="'.Tools::safeOutput($this->_baseUrl).'" method="post" name="delete_comment_form">
+					<input type="hidden" name="delete_id_product_comment[]" id="delete_id_product_comment" />
+					<input type="hidden" name="delete_action" id="delete_action" />
+					<br /><table class="table" border="0" cellspacing="0" cellpadding="0">
+					<thead>
+					<tr>
+						<th><input class="noborder" type="checkbox" name="delete_id_product_comment[]" onclick="checkDelBoxes(this.form, \'delete_id_product_comment[]\', this.checked)" /></th>
+						<th style="width:150px;">'.$this->l('Author').'</th>
+						<th style="width:550px;">'.$this->l('Comment').'</th>
+						<th style="width:30px;">'.$this->l('Actions').'</th>
+					</tr>
+					</thead>
+					<tbody>';
+					foreach ($comments as $comment)
+						$this->_html .= '<tr>
+						<td><input class="noborder" type="checkbox" value="'.$comment['id_product_comment'].'" name="delete_id_product_comment[]" /></td>
+						<td>'.htmlspecialchars($comment['customer_name'], ENT_COMPAT, 'UTF-8').'.</td>
+						<td>'.htmlspecialchars($comment['content'], ENT_COMPAT, 'UTF-8').'</td>
+						<td><a href="javascript:;" onclick="delComment(\''.(int)($comment['id_product_comment']).'\',\''.$this->l('Are you sure?').'\');"><img src="'.$this->_path.'img/delete.png" alt="'.$this->l('Delete').'" title="'.$this->l('Delete').'" /></a></td>
+						</tr>';
+						$this->_html .= '
+						<tr>
+							<td colspan="3" style="font-weight:bold;text-align:right">'.$this->l('Selection:').'</td>
+							<td><a href="javascript:;" onclick="delComment(0);"><img src="'.$this->_path.'img/delete.png" alt="'.$this->l('Delete').'" title="'.$this->l('Delete').'" /></a></td>
+						</tr>
+						</tbody>
+					</table>
+					</form>';
+				}
+				else
+					$this->_html .= $this->l('No comments to manage at this time.');
+
+		$this->_html .= '</fieldset><br />';
+	}
+
+	private function _checkDeleteComment()
+	{
+		$action = Tools::getValue('delete_action');
+		if (empty($action) === false)
+		{
+			$product_comments = Tools::getValue('delete_id_product_comment');
+
+			if (count($product_comments))
+			{
+				require_once(dirname(__FILE__).'/ProductComment.php');
+				if ($action == 'delete')
+				{
+						foreach ($product_comments as $id_product_comment)
+						{
+							if (!$id_product_comment)
+								continue;
+							$comment = new ProductComment((int)$id_product_comment);
+							$comment->delete();
+							ProductComment::deleteGrades((int)$id_product_comment);
+						}
+				}
+			}
+		}
+	}
+
 	public function hookProductTab($params)
 	{
-		global $smarty, $cookie;
-
-		require_once(dirname(__FILE__).'/ProductComment.php');
+    	require_once(dirname(__FILE__).'/ProductComment.php');
 		require_once(dirname(__FILE__).'/ProductCommentCriterion.php');
 
-		$smarty->assign(array(
-				'allow_guests' => (int)Configuration::get('PRODUCT_COMMENTS_ALLOW_GUESTS'),
-				'comments' => ProductComment::getByProduct((int)($_GET['id_product'])),
-				'criterions' => ProductCommentCriterion::getByProduct((int)($_GET['id_product']), (int)($cookie->id_lang)),
-				'nbComments' => (int)(ProductComment::getCommentNumber((int)($_GET['id_product'])))));
+		$this->context->smarty->assign(array(
+			'allow_guests' => (int)Configuration::get('PRODUCT_COMMENTS_ALLOW_GUESTS'),
+			'comments' => ProductComment::getByProduct((int)(Tools::getValue('id_product'))),
+			'criterions' => ProductCommentCriterion::getByProduct((int)(Tools::getValue('id_product')), $this->context->language->id),
+			'nbComments' => (int)(ProductComment::getCommentNumber((int)(Tools::getValue('id_product'))))
+		));
 
 		return ($this->display(__FILE__, '/tab.tpl'));
 	}
 
-	private function _frontOfficePostProcess()
+	public function hookproductOutOfStock($params)
 	{
-		global $smarty, $cookie, $errors;
-
 		require_once(dirname(__FILE__).'/ProductComment.php');
 		require_once(dirname(__FILE__).'/ProductCommentCriterion.php');
 
-		if (empty($cookie->id_customer) && !isset($cookie->id_guest))
-			Guest::setNewGuest($cookie);
+		$id_guest = (!$id_customer = (int)$this->context->cookie->id_customer) ? (int)$this->context->cookie->id_guest : false;
+		$customerComment = ProductComment::getByCustomer((int)(Tools::getValue('id_product')), (int)$this->context->cookie->id_customer, true, (int)$id_guest);
 
-		$allow_guests = (int)Configuration::get('PRODUCT_COMMENTS_ALLOW_GUESTS');
-		if (Tools::isSubmit('submitMessage') && (!empty($cookie->id_customer) || ($cookie->id_guest && $allow_guests)))
-		{
-			$id_guest = (!$id_customer = (int)$cookie->id_customer) ? (int)$cookie->id_guest : false;
-			$customerComment = ProductComment::getByCustomer((int)(Tools::getValue('id_product')), (int)$cookie->id_customer, true, (int)$id_guest);
+		$average = ProductComment::getAverageGrade((int)Tools::getValue('id_product'));
 
-			if (!$customerComment || ($customerComment && (strtotime($customerComment['date_add']) + Configuration::get('PRODUCT_COMMENTS_MINIMAL_TIME')) < time()))
-			{
-				$customer_name = false;
-				if ($id_guest && (!$customer_name = Tools::getValue('customer_name')))
-					$errors[] = $this->l('Please fill your name');
-				if (!count($errors) && Tools::getValue('content'))
-				{
-					$comment = new ProductComment();
-					$comment->content = strip_tags(Tools::getValue('content'));
-					$comment->id_product = (int)$_GET['id_product'];
-					$comment->id_customer = (int)$cookie->id_customer;
-					$comment->id_guest = (int)$id_guest;
-					$comment->customer_name = pSQL($customer_name);
-					$comment->title = pSQL(Tools::getValue('title'));
-					$comment->grade = 0;
-					$comment->validate = 0;
+		$image = Product::getCover((int)Tools::getValue('id_product'));
 
-					if (!$comment->content)
-						$errors[] = $this->l('Invalid comment text posted.');
-					else
-					{
-						$comment->save();
-						for ($i = 1, $grade = 0; isset($_POST[$i.'_grade']) === true; ++$i)
-						{
-							$cgrade = (int)Tools::getValue($i.'_grade');
-							$grade += $cgrade;
-							$productCommentCriterion = new ProductCommentCriterion((int)Tools::getValue('id_product_comment_criterion_'.$i));
-							if ($productCommentCriterion->id)
-								$productCommentCriterion->addGrade($comment->id, $cgrade);
-						}
-						if (($i - 1) > 0)
-							$comment->grade = ($grade / ($i - 1));
-						if (!$comment->save())
-							$errors[] = $this->l('An error occurred while saving your comment.');
-						else
-							$smarty->assign('confirmation', $this->l('Comment posted.').((int)(Configuration::get('PRODUCT_COMMENTS_MODERATE')) ? ' '.$this->l('Awaiting moderator validation.') : ''));
-					}
-				}
-				else
-					$errors[] = $this->l('Comment text is required.');
-			}
-			else
-				$errors[] = $this->l('You should wait').' '.Configuration::get('PRODUCT_COMMENTS_MINIMAL_TIME').' '.$this->l('seconds before posting a new comment');
-		}
+		$this->context->smarty->assign(array(
+			'id_product_comment_form' => (int)Tools::getValue('id_product'),
+			'product' => new Product((int)Tools::getValue('id_product'), false, $this->context->language->id),
+			'secure_key' => $this->secure_key,
+			'logged' => (int)$this->context->customer->isLogged(true),
+			'allow_guests' => (int)Configuration::get('PRODUCT_COMMENTS_ALLOW_GUESTS'),
+			'productcomment_cover' => (int)Tools::getValue('id_product').'-'.(int)$image['id_image'],
+			'mediumSize' => Image::getSize(ImageType::getFormatedName('medium')),
+			'criterions' => ProductCommentCriterion::getByProduct((int)Tools::getValue('id_product'), $this->context->language->id),
+			'action_url' => '',
+			'averageTotal' => (int)$average['grade'],
+			'too_early' => ($customerComment && (strtotime($customerComment['date_add']) + Configuration::get('PRODUCT_COMMENTS_MINIMAL_TIME')) > time()),
+			'nbComments' => (int)(ProductComment::getCommentNumber((int)Tools::getValue('id_product')))
+		));
+
+		return ($this->display(__FILE__, '/productcomments-extra.tpl'));
 	}
 
-	public function hookProductTabContent($params)
-	{
-		global $smarty, $cookie;
+    public function hookProductTabContent($params)
+    {
+		$this->context->controller->addJS($this->_path.'js/jquery.rating.pack.js');
+		$this->context->controller->addJS($this->_path.'js/jquery.textareaCounter.plugin.js');
+		$this->context->controller->addJS($this->_path.'js/productcomments.js');
 
-		$id_guest = (!$id_customer = (int)$cookie->id_customer) ? (int)$cookie->id_guest : false;
-		$customerComment = ProductComment::getByCustomer((int)(Tools::getValue('id_product')), (int)$cookie->id_customer, true, (int)$id_guest);
+		$id_guest = (!$id_customer = (int)$this->context->cookie->id_customer) ? (int)$this->context->cookie->id_guest : false;
+		$customerComment = ProductComment::getByCustomer((int)(Tools::getValue('id_product')), (int)$this->context->cookie->id_customer, true, (int)$id_guest);
 
-		$averages = ProductComment::getAveragesByProduct((int)Tools::getValue('id_product'), (int)$cookie->id_lang);
+		$averages = ProductComment::getAveragesByProduct((int)Tools::getValue('id_product'), $this->context->language->id);
 		$averageTotal = 0;
-		foreach ($averages AS $average)
+		foreach ($averages as $average)
 			$averageTotal += (float)($average);
 		$averageTotal = count($averages) ? ($averageTotal / count($averages)) : 0;
 
-		$smarty->assign(array(
-				'logged' => (int)$cookie->id_customer,
-				'action_url' => '',
-				'comments' => ProductComment::getByProduct((int)Tools::getValue('id_product')),
-				'criterions' => ProductCommentCriterion::getByProduct((int)Tools::getValue('id_product'), (int)$cookie->id_lang),
-				'averages' => $averages,
-				'product_comment_path' => $this->_path,
-				'averageTotal' => $averageTotal,
-				'allow_guests' => (int)Configuration::get('PRODUCT_COMMENTS_ALLOW_GUESTS'),
-				'too_early' => ($customerComment AND (strtotime($customerComment['date_add']) + Configuration::get('PRODUCT_COMMENTS_MINIMAL_TIME')) > time()),
-				'delay' => Configuration::get('PRODUCT_COMMENTS_MINIMAL_TIME')));
+		$image = Product::getCover((int)Tools::getValue('id_product'));
 
-		$controller = new FrontController();
-		$controller->pagination((int)ProductComment::getCommentNumber((int)Tools::getValue('id_product')));
+		$this->context->smarty->assign(array(
+			'logged' => (int)$this->context->customer->isLogged(true),
+			'action_url' => '',
+			'comments' => ProductComment::getByProduct((int)Tools::getValue('id_product'), 1, null, $this->context->cookie->id_customer),
+			'criterions' => ProductCommentCriterion::getByProduct((int)Tools::getValue('id_product'), $this->context->language->id),
+			'averages' => $averages,
+			'product_comment_path' => $this->_path,
+			'averageTotal' => $averageTotal,
+			'allow_guests' => (int)Configuration::get('PRODUCT_COMMENTS_ALLOW_GUESTS'),
+			'too_early' => ($customerComment && (strtotime($customerComment['date_add']) + Configuration::get('PRODUCT_COMMENTS_MINIMAL_TIME')) > time()),
+			'delay' => Configuration::get('PRODUCT_COMMENTS_MINIMAL_TIME'),
+			'id_product_comment_form' => (int)Tools::getValue('id_product'),
+			'secure_key' => $this->secure_key,
+			'productcomment_cover' => (int)Tools::getValue('id_product').'-'.(int)$image['id_image'],
+			'mediumSize' => Image::getSize(ImageType::getFormatedName('medium')),
+			'nbComments' => (int)ProductComment::getCommentNumber((int)Tools::getValue('id_product')),
+			'productcomments_controller_url' => $this->context->link->getModuleLink('productcomments'),
+			'productcomments_url_rewriting_activated' => Configuration::get('PS_REWRITING_SETTINGS', 0)
+		));
+
+		$this->context->controller->pagination((int)ProductComment::getCommentNumber((int)Tools::getValue('id_product')));
 
 		return ($this->display(__FILE__, '/productcomments.tpl'));
 	}
 
 	public function hookHeader()
 	{
-		$this->_frontOfficePostProcess();
+		$this->context->controller->addCSS($this->_path.'productcomments.css', 'all');
 	}
 
 	public function hookExtraProductComparison($params)
 	{
-		global $smarty, $cookie;
+		require_once(dirname(__FILE__).'/ProductComment.php');
+		require_once(dirname(__FILE__).'/ProductCommentCriterion.php');
 
 		$list_grades = array();
 		$list_product_grades = array();
 		$list_product_average = array();
 		$list_product_comment = array();
 
-		foreach ($params['list_ids_product'] AS $id_product)
+		foreach ($params['list_ids_product'] as $id_product)
 		{
-			$grades = ProductComment::getAveragesByProduct((int)$id_product, (int)$cookie->id_lang);
-			$criterions = ProductCommentCriterion::getByProduct((int)$id_product, (int)$cookie->id_lang);
+			$grades = ProductComment::getAveragesByProduct($id_product, $this->context->language->id);
+			$criterions = ProductCommentCriterion::getByProduct($id_product, $this->context->language->id);
 			$grade_total = 0;
-			if (sizeof($grades) > 0)
+			if (count($grades) > 0)
 			{
-				foreach ($criterions AS $criterion)
+				foreach ($criterions as $criterion)
 				{
-					if(isset($grades[$criterion['id_product_comment_criterion']]))
+					if (isset($grades[$criterion['id_product_comment_criterion']]))
 					{
-						$list_product_grades[$criterion['id_product_comment_criterion']][$id_product] = $grades[$criterion['id_product_comment_criterion']];
-						$grade_total += (float)($grades[$criterion['id_product_comment_criterion']]);
+					$list_product_grades[$criterion['id_product_comment_criterion']][$id_product] = $grades[$criterion['id_product_comment_criterion']];
+					$grade_total += (float)($grades[$criterion['id_product_comment_criterion']]);
 					}
 					else
 						$list_product_grades[$criterion['id_product_comment_criterion']][$id_product] = 0;
@@ -630,17 +799,17 @@ class ProductComments extends Module
 						$list_grades[$criterion['id_product_comment_criterion']] = $criterion['name'];
 				}
 
-				$list_product_average[$id_product] = $grade_total / sizeof($criterion);
+				$list_product_average[$id_product] = $grade_total / count($criterions);
 				$list_product_comment[$id_product] = ProductComment::getByProduct($id_product, 0, 3);
 			}
 		}
 
-		if (sizeof($list_grades) < 1)
+		if (count($list_grades) < 1)
 			return false;
 
-		$smarty->assign(array('grades' => $list_grades, 'product_grades' => $list_product_grades, 'list_ids_product' => $params['list_ids_product'],
-				'list_product_average' => $list_product_average, 'product_comments' => $list_product_comment));
+		$this->context->smarty->assign(array('grades' => $list_grades,	'product_grades' => $list_product_grades, 'list_ids_product' => $params['list_ids_product'],
+		'list_product_average' => $list_product_average, 'product_comments' => $list_product_comment));
 
-		return $this->display(__FILE__,'/products-comparison.tpl');
+		return $this->display(__FILE__, '/products-comparison.tpl');
 	}
 }

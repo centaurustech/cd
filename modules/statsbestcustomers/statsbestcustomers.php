@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 15821 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -37,8 +36,8 @@ class StatsBestCustomers extends ModuleGrid
 	private $_defaultSortDirection;
 	private $_emptyMessage;
 	private $_pagingMessage;
-	
-	function __construct()
+
+	public function __construct()
 	{
 		$this->name = 'statsbestcustomers';
 		$this->tab = 'analytics_stats';
@@ -46,11 +45,13 @@ class StatsBestCustomers extends ModuleGrid
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 		
+		parent::__construct();
+		
 		$this->_defaultSortColumn = 'totalMoneySpent';
 		$this->_defaultSortDirection = 'DESC';
 		$this->_emptyMessage = $this->l('Empty recordset returned');
-		$this->_pagingMessage = $this->l('Displaying').' {0} - {1} '.$this->l('of').' {2}';
-		
+		$this->_pagingMessage = sprintf($this->l('Displaying %1$s of %2$s'), '{0} - {1}', '{2}');
+
 		$this->_columns = array(
 			array(
 				'id' => 'lastname',
@@ -83,18 +84,16 @@ class StatsBestCustomers extends ModuleGrid
 				'width' => 80,
 				'align' => 'right')
 		);
-		
-		parent::__construct();
-		
+
 		$this->displayName = $this->l('Best customers');
 		$this->description = $this->l('A list of the best customers');
 	}
-	
+
 	public function install()
 	{
-		return (parent::install() AND $this->registerHook('AdminStatsModules'));
+		return (parent::install() && $this->registerHook('AdminStatsModules'));
 	}
-	
+
 	public function hookAdminStatsModules($params)
 	{
 		$engineParams = array(
@@ -109,32 +108,30 @@ class StatsBestCustomers extends ModuleGrid
 		if (Tools::getValue('export'))
 			$this->csvExport($engineParams);
 		$this->_html = '
-		<fieldset class="width3"><legend><img src="../modules/'.$this->name.'/logo.gif" /> '.$this->displayName.'</legend>
-			'.ModuleGrid::engine($engineParams).'
-		<p><a href="'.htmlentities($_SERVER['REQUEST_URI']).'&export=1"><img src="../img/admin/asterisk.gif" />'.$this->l('CSV Export').'</a></p>
-		</fieldset><br />
-		<fieldset class="width3"><legend><img src="../img/admin/comment.gif" /> '.$this->l('Guide').'</legend>
+		<div class="blocStats"><h2 class="icon-'.$this->name.'"><span></span>'.$this->displayName.'</h2>
+			'.$this->engine($engineParams).'
+		<p><a class="button export-csv" href="'.htmlentities($_SERVER['REQUEST_URI']).'&export=1"><span>'.$this->l('CSV Export').'</span></a></p>
+		</div><br />
+		<div class="blocStats"><h2 class="icon-guide"><span></span>'.$this->l('Guide').'</h2>
 			<h2 >'.$this->l('Develop clients\' loyalty').'</h2>
 			<p class="space">
-				'.$this->l('Keeping a client is more profitable than acquiring a new one. Thus, it is essential to make them loyal, in other words to make them want to come back to your shop.').' <br />
-				'.$this->l('Word of mouth is also a good way of getting new satisfied customers as an unsatisfied customer won\'t attract new ones.').'<br />
-				'.$this->l('There are many ways to achieve this: ').'
+				'.$this->l('Keeping a client is more profitable than gaining a new one. Thus, it is necessary to develop their loyalty, in other words to make them want to come back to your webshop.').' <br />
+				'.$this->l('Word of mouth is also a means to of getting new, satisfied clients; a dissatisfied one won\'t attract new clients.').'<br />
+				'.$this->l('In order to achieve this goal you can organize: ').'
 				<ul>
-					<li>'.$this->l('Occasional operations: commercial rewards (personalized special offers, product or service offered), non commercial rewards (priority handling of an order or a product), pecuniary rewards (bonds, discount coupons, payback...).').'</li>
-					<li>'.$this->l('Sustainable operations: loyalty points or cards, which not only justify communication between merchant and client, but also offer advantages to clients (private offers, discounts).').'</li>
+					<li>'.$this->l('Punctual operations: commercial rewards (personalized special offers, product or service offered),
+						non commercial rewards (priority handling of an order or a product), pecuniary rewards (bonds, discount coupons, payback).').'</li>
+					<li>'.$this->l('Sustainable operations: loyalty points or cards, which not only justify communication between merchant and client,
+						 but also offer advantages to clients (private offers, discounts).').'</li>
 				</ul>
-				'.$this->l('These operations encourage customers to buy and also to return to your online shop regularly.').' <br />
+				'.$this->l('These operations encourage clients to buy products and visit your webshop regularly.').' <br />
 			</p><br />
-		</fieldset>';
+		</div>';
 		return $this->_html;
 	}
 
-	public function setOption($option)
-	{
-	}
-	
 	public function getData()
-	{		
+	{
 		$this->_query = '
 		SELECT SQL_CALC_FOUND_ROWS c.`id_customer`, c.`lastname`, c.`firstname`, c.`email`,
 			COUNT(co.`id_connections`) as totalVisits,
@@ -149,17 +146,18 @@ class StatsBestCustomers extends ModuleGrid
 		FROM `'._DB_PREFIX_.'customer` c
 		LEFT JOIN `'._DB_PREFIX_.'guest` g ON c.`id_customer` = g.`id_customer`
 		LEFT JOIN `'._DB_PREFIX_.'connections` co ON g.`id_guest` = co.`id_guest`
-		WHERE co.date_add BETWEEN '.$this->getDate().'
-		GROUP BY c.`id_customer`, c.`lastname`, c.`firstname`, c.`email`';
+		WHERE co.date_add BETWEEN '.$this->getDate()
+			.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER, 'c').
+		'GROUP BY c.`id_customer`, c.`lastname`, c.`firstname`, c.`email`';
 		if (Validate::IsName($this->_sort))
 		{
 			$this->_query .= ' ORDER BY `'.$this->_sort.'`';
-			if (isset($this->_direction) AND Validate::IsSortDirection($this->_direction))
+			if (isset($this->_direction) && Validate::isSortDirection($this->_direction))
 				$this->_query .= ' '.$this->_direction;
 		}
-		if (($this->_start === 0 OR Validate::IsUnsignedInt($this->_start)) AND Validate::IsUnsignedInt($this->_limit))
+		if (($this->_start === 0 || Validate::IsUnsignedInt($this->_start)) && Validate::IsUnsignedInt($this->_limit))
 			$this->_query .= ' LIMIT '.$this->_start.', '.($this->_limit);
-		$this->_values = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS($this->_query);
+		$this->_values = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($this->_query);
 		$this->_totalCount = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('SELECT FOUND_ROWS()');
 	}
 }

@@ -20,39 +20,30 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16875 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class ProfileCore extends ObjectModel
 {
- 	/** @var mixed Name */
-	public 		$name;
-	
- 	protected 	$fieldsRequiredLang = array('name');
- 	protected 	$fieldsSizeLang = array('name' => 32);
- 	protected 	$fieldsValidateLang = array('name' => 'isGenericName');
+ 	/** @var string Name */
+	public $name;
 
-	protected 	$table = 'profile';
-	protected 	$identifier = 'id_profile';
-		
-	public function getFields()
-	{
-		return array('id_profile' => $this->id);
-	}
-	
 	/**
-	* Check then return multilingual fields for database interaction
-	*
-	* @return array Multilingual fields
-	*/
-	public function getTranslationsFieldsChild()
-	{
-		parent::validateFieldsLang();
-		return parent::getTranslationsFields(array('name'));
-	}
-	
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'profile',
+		'primary' => 'id_profile',
+		'multilang' => true,
+		'fields' => array(
+			// Lang fields
+			'name' => array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 32),
+		),
+	);
+
+	protected static $_cache_accesses = array();
+
 	/**
 	* Get all available profiles
 	*
@@ -60,11 +51,11 @@ class ProfileCore extends ObjectModel
 	*/
 	public static function getProfiles($id_lang)
 	{
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
 		SELECT p.`id_profile`, `name`
 		FROM `'._DB_PREFIX_.'profile` p
-		LEFT JOIN `'._DB_PREFIX_.'profile_lang` pl ON (p.`id_profile` = pl.`id_profile` AND `id_lang` = '.(int)($id_lang).')
-		ORDER BY `name` ASC');
+		LEFT JOIN `'._DB_PREFIX_.'profile_lang` pl ON (p.`id_profile` = pl.`id_profile` AND `id_lang` = '.(int)$id_lang.')
+		ORDER BY `id_profile` ASC');
 	}
 
 	/**
@@ -72,59 +63,91 @@ class ProfileCore extends ObjectModel
 	*
 	* @return string Profile
 	*/
-	public static function getProfile($id_profile, $id_lang = NULL)
+	public static function getProfile($id_profile, $id_lang = null)
 	{
-		if ($id_lang == NULL)
-			$id_lang = _PS_LANG_DEFAULT_;
+		if (!$id_lang)
+			$id_lang = Configuration::get('PS_LANG_DEFAULT');
+
 		return Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-		SELECT `name` 
-		FROM `'._DB_PREFIX_.'profile` p 
-		LEFT JOIN `'._DB_PREFIX_.'profile_lang` pl ON (p.`id_profile` = pl.`id_profile`) 
-		WHERE p.`id_profile` = '.(int)($id_profile).'
-		AND pl.`id_lang` = '.(int)($id_lang));
+			SELECT `name`
+			FROM `'._DB_PREFIX_.'profile` p
+			LEFT JOIN `'._DB_PREFIX_.'profile_lang` pl ON (p.`id_profile` = pl.`id_profile`)
+			WHERE p.`id_profile` = '.(int)$id_profile.'
+			AND pl.`id_lang` = '.(int)$id_lang
+		);
 	}
 
-	
-	public function add($autodate = true, $nullValues = false)
+	public function add($autodate = true, $null_values = false)
 	{
-	 	if (parent::add($autodate, true))
-			return Db::getInstance()->Execute('INSERT INTO '._DB_PREFIX_.'access (SELECT '.(int)($this->id).', id_tab, 0, 0, 0, 0 FROM '._DB_PREFIX_.'tab)');
+		if (parent::add($autodate, true))
+		{
+			$result = Db::getInstance()->execute('INSERT INTO '._DB_PREFIX_.'access (SELECT '.(int)$this->id.', id_tab, 0, 0, 0, 0 FROM '._DB_PREFIX_.'tab)');
+			$result &= Db::getInstance()->execute('
+				INSERT INTO '._DB_PREFIX_.'module_access
+				(`id_profile`, `id_module`, `configure`, `view`)
+				(SELECT '.(int)$this->id.', id_module, 0, 1 FROM '._DB_PREFIX_.'module)
+			');
+			return $result;
+		}
 		return false;
 	}
-	
+
 	public function delete()
 	{
 	 	if (parent::delete())
-	 	 	return Db::getInstance()->Execute('DELETE FROM `'._DB_PREFIX_.'access` WHERE `id_profile` = '.(int)($this->id));
+	 	 	return (
+				Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'access` WHERE `id_profile` = '.(int)$this->id)
+				&& Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'module_access` WHERE `id_profile` = '.(int)$this->id)
+			);
 		return false;
 	}
 
 	public static function getProfileAccess($id_profile, $id_tab)
 	{
 		// getProfileAccesses is cached so there is no performance leak
-		$accesses = self::getProfileAccesses($id_profile);
+		$accesses = Profile::getProfileAccesses($id_profile);
 		return (isset($accesses[$id_tab]) ? $accesses[$id_tab] : false);
 	}
 
-	private static $_cache_accesses = array();
-	public static function getProfileAccesses($id_profile)
+	public static function getProfileAccesses($id_profile, $type = 'id_tab')
 	{
-		if (!isset(self::$_cache_accesses[$id_profile]))
-		{
-			$result = Db::getInstance()->ExecuteS('
-			SELECT *
-			FROM `'._DB_PREFIX_.'access`
-			WHERE `id_profile` = '.(int)$id_profile);
+		if (!in_array($type, array('id_tab', 'class_name')))
+			return false;
 
+		if (!isset(self::$_cache_accesses[$id_profile]))
 			self::$_cache_accesses[$id_profile] = array();
-			foreach($result AS $row)
+			
+		if (!isset(self::$_cache_accesses[$id_profile][$type]))
+		{
+			self::$_cache_accesses[$id_profile][$type] = array();
+			// Super admin profile has full auth
+			if ($id_profile == _PS_ADMIN_PROFILE_)
 			{
-				if (!isset(self::$_cache_accesses[$id_profile][$row['id_tab']]))
-					self::$_cache_accesses[$id_profile][$row['id_tab']] = array();
-				self::$_cache_accesses[$id_profile][$row['id_tab']] = $row;
+				foreach (Tab::getTabs(Context::getContext()->language->id) as $tab)
+					self::$_cache_accesses[$id_profile][$type][$tab[$type]] = array(
+						'id_profile' => _PS_ADMIN_PROFILE_,
+						'id_tab' => $tab['id_tab'],
+						'class_name' => $tab['class_name'],
+						'view' => '1',
+						'add' => '1',
+						'edit' => '1',
+						'delete' => '1',
+					);
+			}
+			else
+			{
+				$result = Db::getInstance()->executeS('
+				SELECT *
+				FROM `'._DB_PREFIX_.'access` a
+				LEFT JOIN `'._DB_PREFIX_.'tab` t ON t.id_tab = a.id_tab
+				WHERE `id_profile` = '.(int)$id_profile);
+
+				foreach ($result as $row)
+					self::$_cache_accesses[$id_profile][$type][$row[$type]] = $row;
 			}
 		}
-		return self::$_cache_accesses[$id_profile];
+
+		return self::$_cache_accesses[$id_profile][$type];
 	}
 }
 

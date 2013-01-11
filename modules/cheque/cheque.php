@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 15821 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,8 +32,9 @@ class Cheque extends PaymentModule
 	private $_html = '';
 	private $_postErrors = array();
 
-	public  $chequeName;
-	public  $address;
+	public $chequeName;
+	public $address;
+	public $extra_mail_vars;
 
 	public function __construct()
 	{
@@ -42,7 +42,7 @@ class Cheque extends PaymentModule
 		$this->tab = 'payments_gateways';
 		$this->version = '2.3';
 		$this->author = 'PrestaShop';
-		
+
 		$this->currencies = true;
 		$this->currencies_mode = 'checkbox';
 
@@ -51,29 +51,35 @@ class Cheque extends PaymentModule
 			$this->chequeName = $config['CHEQUE_NAME'];
 		if (isset($config['CHEQUE_ADDRESS']))
 			$this->address = $config['CHEQUE_ADDRESS'];
-			
+
 		parent::__construct();
 
 		$this->displayName = $this->l('Check');
 		$this->description = $this->l('Module for accepting payments by check.');
 		$this->confirmUninstall = $this->l('Are you sure you want to delete your details ?');
-		
-		if (!isset($this->chequeName) OR !isset($this->address))
+
+		if ((!isset($this->chequeName) || !isset($this->address) || empty($this->chequeName) || empty($this->address)))
 			$this->warning = $this->l('\'To the order of\' and address must be configured in order to use this module correctly.');
-		if (!sizeof(Currency::checkPaymentCurrencies($this->id)))
+		if (!count(Currency::checkPaymentCurrencies($this->id)))
 			$this->warning = $this->l('No currency set for this module');
+	
+		$this->extra_mail_vars = array(
+											'{cheque_name}' => Configuration::get('CHEQUE_NAME'),
+											'{cheque_address}' => Configuration::get('CHEQUE_ADDRESS'),
+											'{cheque_address_html}' => str_replace("\n", '<br />', Configuration::get('CHEQUE_ADDRESS'))
+											);
 	}
 
 	public function install()
 	{
-		if (!parent::install() OR !$this->registerHook('payment') OR !$this->registerHook('paymentReturn'))
+		if (!parent::install() || !$this->registerHook('payment') || !$this->registerHook('paymentReturn'))
 			return false;
 		return true;
 	}
 
 	public function uninstall()
 	{
-		if (!Configuration::deleteByName('CHEQUE_NAME') OR !Configuration::deleteByName('CHEQUE_ADDRESS') OR !parent::uninstall())
+		if (!Configuration::deleteByName('CHEQUE_NAME') || !Configuration::deleteByName('CHEQUE_ADDRESS') || !parent::uninstall())
 			return false;
 		return true;
 	}
@@ -96,13 +102,13 @@ class Cheque extends PaymentModule
 			Configuration::updateValue('CHEQUE_NAME', Tools::getValue('name'));
 			Configuration::updateValue('CHEQUE_ADDRESS', Tools::getValue('address'));
 		}
-		$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('OK').'" /> '.$this->l('Settings updated').'</div>';
+		$this->_html .= '<div class="conf confirm"> '.$this->l('Settings updated').'</div>';
 	}
 
 	private function _displayCheque()
 	{
 		$this->_html .= '<img src="../modules/cheque/cheque.jpg" style="float:left; margin-right:15px;"><b>'.$this->l('This module allows you to accept payments by check.').'</b><br /><br />
-		'.$this->l('If the customer chooses this payment mode, the order status will change to \'Waiting for payment\'.').'<br />
+		'.$this->l('If the client chooses this payment mode, the order status will change to \'Waiting for payment\'.').'<br />
 		'.$this->l('Therefore, you will need to manually confirm the order as soon as you receive a check.').'<br /><br /><br />';
 	}
 
@@ -132,11 +138,11 @@ class Cheque extends PaymentModule
 		if (Tools::isSubmit('btnSubmit'))
 		{
 			$this->_postValidation();
-			if (!sizeof($this->_postErrors))
+			if (!count($this->_postErrors))
 				$this->_postProcess();
 			else
-				foreach ($this->_postErrors AS $err)
-					$this->_html .= '<div class="alert error">'. $err .'</div>';
+				foreach ($this->_postErrors as $err)
+					$this->_html .= '<div class="alert error">'.$err.'</div>';
 		}
 		else
 			$this->_html .= '<br />';
@@ -147,41 +153,14 @@ class Cheque extends PaymentModule
 		return $this->_html;
 	}
 
-	public function execPayment($cart)
-	{
-		if (!$this->active)
-			return ;
-		
-		if (!$this->_checkCurrency($cart))
-			Tools::redirectLink(__PS_BASE_URI__.'order.php');
-
-		global $cookie, $smarty;
-		
-		$smarty->assign(array(
-			'nbProducts' => $cart->nbProducts(),
-			'cust_currency' => $cart->id_currency,
-			'currencies' => $this->getCurrency((int)$cart->id_currency),
-			'total' => $cart->getOrderTotal(true, Cart::BOTH),
-			'isoCode' => Language::getIsoById((int)($cookie->id_lang)),
-			'chequeName' => $this->chequeName,
-			'chequeAddress' => nl2br2($this->address),
-			'this_path' => $this->_path,
-			'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/'
-		));
-
-		return $this->display(__FILE__, 'payment_execution.tpl');
-	}
-
 	public function hookPayment($params)
 	{
 		if (!$this->active)
-			return ;
-		if (!$this->_checkCurrency($params['cart']))
-			return ;
+			return;
+		if (!$this->checkCurrency($params['cart']))
+			return;
 
-		global $smarty;
-
-		$smarty->assign(array(
+		$this->smarty->assign(array(
 			'this_path' => $this->_path,
 			'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/'
 		));
@@ -191,31 +170,33 @@ class Cheque extends PaymentModule
 	public function hookPaymentReturn($params)
 	{
 		if (!$this->active)
-			return ;
+			return;
 
-		global $smarty;
 		$state = $params['objOrder']->getCurrentState();
-		if ($state == Configuration::get('PS_OS_CHEQUE') OR $state == Configuration::get('PS_OS_OUTOFSTOCK'))
-			$smarty->assign(array(
+		if ($state == Configuration::get('PS_OS_CHEQUE') || $state == Configuration::get('PS_OS_OUTOFSTOCK'))
+		{
+			$this->smarty->assign(array(
 				'total_to_pay' => Tools::displayPrice($params['total_to_pay'], $params['currencyObj'], false),
 				'chequeName' => $this->chequeName,
-				'chequeAddress' => nl2br2($this->address),
+				'chequeAddress' => Tools::nl2br($this->address),
 				'status' => 'ok',
 				'id_order' => $params['objOrder']->id
 			));
+			if (isset($params['objOrder']->reference) && !empty($params['objOrder']->reference))
+				$this->smarty->assign('reference', $params['objOrder']->reference);
+		}
 		else
-			$smarty->assign('status', 'failed');
+			$this->smarty->assign('status', 'failed');
 		return $this->display(__FILE__, 'payment_return.tpl');
 	}
-	
-	private function _checkCurrency($cart)
+
+	public function checkCurrency($cart)
 	{
 		$currency_order = new Currency((int)($cart->id_currency));
 		$currencies_module = $this->getCurrency((int)$cart->id_currency);
-		$currency_default = Configuration::get('PS_CURRENCY_DEFAULT');
 
 		if (is_array($currencies_module))
-			foreach ($currencies_module AS $currency_module)
+			foreach ($currencies_module as $currency_module)
 				if ($currency_order->id == $currency_module['id_currency'])
 					return true;
 		return false;

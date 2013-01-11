@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,10 +32,10 @@ class BankWire extends PaymentModule
 	private $_html = '';
 	private $_postErrors = array();
 
-	public  $details;
-	public  $owner;
-	public	$address;
-
+	public $details;
+	public $owner;
+	public $address;
+	public $extra_mail_vars;
 	public function __construct()
 	{
 		$this->name = 'bankwire';
@@ -60,15 +59,21 @@ class BankWire extends PaymentModule
 		$this->displayName = $this->l('Bank Wire');
 		$this->description = $this->l('Accept payments by bank wire.');
 		$this->confirmUninstall = $this->l('Are you sure you want to delete your details?');
-		if (!isset($this->owner) OR !isset($this->details) OR !isset($this->address))
+		if (!isset($this->owner) || !isset($this->details) || !isset($this->address))
 			$this->warning = $this->l('Account owner and details must be configured in order to use this module correctly.');
-		if (!sizeof(Currency::checkPaymentCurrencies($this->id)))
+		if (!count(Currency::checkPaymentCurrencies($this->id)))
 			$this->warning = $this->l('No currency set for this module');
+
+		$this->extra_mail_vars = array(
+										'{bankwire_owner}' => Configuration::get('BANK_WIRE_OWNER'),
+										'{bankwire_details}' => nl2br(Configuration::get('BANK_WIRE_DETAILS')),
+										'{bankwire_address}' => nl2br(Configuration::get('BANK_WIRE_ADDRESS'))
+										);
 	}
 
 	public function install()
 	{
-		if (!parent::install() OR !$this->registerHook('payment') OR !$this->registerHook('paymentReturn'))
+		if (!parent::install() || !$this->registerHook('payment') || !$this->registerHook('paymentReturn'))
 			return false;
 		return true;
 	}
@@ -76,9 +81,9 @@ class BankWire extends PaymentModule
 	public function uninstall()
 	{
 		if (!Configuration::deleteByName('BANK_WIRE_DETAILS')
-				OR !Configuration::deleteByName('BANK_WIRE_OWNER')
-				OR !Configuration::deleteByName('BANK_WIRE_ADDRESS')
-				OR !parent::uninstall())
+				|| !Configuration::deleteByName('BANK_WIRE_OWNER')
+				|| !Configuration::deleteByName('BANK_WIRE_ADDRESS')
+				|| !parent::uninstall())
 			return false;
 		return true;
 	}
@@ -102,7 +107,7 @@ class BankWire extends PaymentModule
 			Configuration::updateValue('BANK_WIRE_OWNER', Tools::getValue('owner'));
 			Configuration::updateValue('BANK_WIRE_ADDRESS', Tools::getValue('address'));
 		}
-		$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('ok').'" /> '.$this->l('Settings updated').'</div>';
+		$this->_html .= '<div class="conf confirm"> '.$this->l('Settings updated').'</div>';
 	}
 
 	private function _displayBankWire()
@@ -147,11 +152,11 @@ class BankWire extends PaymentModule
 		if (Tools::isSubmit('btnSubmit'))
 		{
 			$this->_postValidation();
-			if (!sizeof($this->_postErrors))
+			if (!count($this->_postErrors))
 				$this->_postProcess();
 			else
-				foreach ($this->_postErrors AS $err)
-					$this->_html .= '<div class="alert error">'. $err .'</div>';
+				foreach ($this->_postErrors as $err)
+					$this->_html .= '<div class="alert error">'.$err.'</div>';
 		}
 		else
 			$this->_html .= '<br />';
@@ -162,37 +167,15 @@ class BankWire extends PaymentModule
 		return $this->_html;
 	}
 
-	public function execPayment($cart)
-	{
-		if (!$this->active)
-			return ;
-		if (!$this->_checkCurrency($cart))
-			Tools::redirectLink(__PS_BASE_URI__.'order.php');
-
-		global $cookie, $smarty;
-
-		$smarty->assign(array(
-			'nbProducts' => $cart->nbProducts(),
-			'cust_currency' => $cart->id_currency,
-			'currencies' => $this->getCurrency((int)$cart->id_currency),
-			'total' => $cart->getOrderTotal(true, Cart::BOTH),
-			'this_path' => $this->_path,
-			'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/'
-		));
-
-		return $this->display(__FILE__, 'payment_execution.tpl');
-	}
-
 	public function hookPayment($params)
 	{
 		if (!$this->active)
-			return ;
-		if (!$this->_checkCurrency($params['cart']))
-			return ;
+			return;
+		if (!$this->checkCurrency($params['cart']))
+			return;
 
-		global $smarty;
 
-		$smarty->assign(array(
+		$this->smarty->assign(array(
 			'this_path' => $this->_path,
 			'this_path_ssl' => Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/'
 		));
@@ -202,32 +185,34 @@ class BankWire extends PaymentModule
 	public function hookPaymentReturn($params)
 	{
 		if (!$this->active)
-			return ;
+			return;
 
-		global $smarty;
 		$state = $params['objOrder']->getCurrentState();
-		if ($state == Configuration::get('PS_OS_BANKWIRE') OR $state == Configuration::get('PS_OS_OUTOFSTOCK'))
-			$smarty->assign(array(
+		if ($state == Configuration::get('PS_OS_BANKWIRE') || $state == Configuration::get('PS_OS_OUTOFSTOCK'))
+		{
+			$this->smarty->assign(array(
 				'total_to_pay' => Tools::displayPrice($params['total_to_pay'], $params['currencyObj'], false),
-				'bankwireDetails' => nl2br2($this->details),
-				'bankwireAddress' => nl2br2($this->address),
+				'bankwireDetails' => Tools::nl2br($this->details),
+				'bankwireAddress' => Tools::nl2br($this->address),
 				'bankwireOwner' => $this->owner,
 				'status' => 'ok',
 				'id_order' => $params['objOrder']->id
 			));
+			if (isset($params['objOrder']->reference) && !empty($params['objOrder']->reference))
+				$this->smarty->assign('reference', $params['objOrder']->reference);
+		}
 		else
-			$smarty->assign('status', 'failed');
+			$this->smarty->assign('status', 'failed');
 		return $this->display(__FILE__, 'payment_return.tpl');
 	}
 	
-	private function _checkCurrency($cart)
+	public function checkCurrency($cart)
 	{
-		$currency_order = new Currency((int)($cart->id_currency));
-		$currencies_module = $this->getCurrency((int)$cart->id_currency);
-		$currency_default = Configuration::get('PS_CURRENCY_DEFAULT');
-		
+		$currency_order = new Currency($cart->id_currency);
+		$currencies_module = $this->getCurrency($cart->id_currency);
+
 		if (is_array($currencies_module))
-			foreach ($currencies_module AS $currency_module)
+			foreach ($currencies_module as $currency_module)
 				if ($currency_order->id == $currency_module['id_currency'])
 					return true;
 		return false;

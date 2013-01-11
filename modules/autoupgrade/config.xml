@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<module>
-	<name>autoupgrade</name>
-	<displayName><![CDATA[1-click Upgrade]]></displayName>
-	<version><![CDATA[1.0]]></version>
-	<description><![CDATA[Provides an automated method to upgrade your shop to the last PrestaShop version. Caution : This module requires right of writing in your prestashop directory. Custom theme are not updated.]]></description>
-	<author><![CDATA[]]></author>
-	<tab><![CDATA[administration]]></tab>
-	<is_configurable>1</is_configurable>
-	<need_instance>1</need_instance>
+        <module>
+            <name>autoupgrade</name>
+            <displayName><![CDATA[Mise &agrave; jour en 1 clic]]></displayName>
+            <version><![CDATA[0.9.4]]></version>
+            <description><![CDATA[Fournit une m&eacute;thode automatis&eacute;e pour mettre &agrave; jour votre boutique vers la derni&egrave;re version de PrestaShop]]></description>
+            <author><![CDATA[]]></author>
+            <tab><![CDATA[administration]]></tab>
+            <is_configurable>1</is_configurable>
+            <need_instance>1</need_instance>
 	<limited_countries></limited_countries>
-</module>
+        </module>

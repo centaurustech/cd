@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -46,7 +45,7 @@ class BlockNewProducts extends Module
 
 	public function install()
 	{
-			if (parent::install() == false OR $this->registerHook('rightColumn') == false OR $this->registerHook('header') == false OR Configuration::updateValue('NEW_PRODUCTS_NBR', 5) == false)
+			if (parent::install() == false || $this->registerHook('rightColumn') == false || $this->registerHook('header') == false || Configuration::updateValue('NEW_PRODUCTS_NBR', 5) == false)
 					return false;
 			return true;
 	}
@@ -56,7 +55,7 @@ class BlockNewProducts extends Module
 		$output = '<h2>'.$this->displayName.'</h2>';
 		if (Tools::isSubmit('submitBlockNewProducts'))
 		{
-			if (!$productNbr = Tools::getValue('productNbr') OR empty($productNbr))
+			if (!($productNbr = Tools::getValue('productNbr')) || empty($productNbr))
 				$output .= '<div class="alert error">'.$this->l('Please fill in the "products displayed" field.').'</div>';
 			elseif ((int)($productNbr) == 0)
 				$output .= '<div class="alert error">'.$this->l('Invalid number.').'</div>';
@@ -64,7 +63,7 @@ class BlockNewProducts extends Module
 			{
 				Configuration::updateValue('PS_BLOCK_NEWPRODUCTS_DISPLAY', (int)(Tools::getValue('always_display')));
 				Configuration::updateValue('NEW_PRODUCTS_NBR', (int)($productNbr));
-				$output .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.$this->l('Settings updated').'</div>';
+				$output .= '<div class="conf confirm">'.$this->l('Settings updated').'</div>';
 			}
 		}
 		return $output.$this->displayForm();
@@ -96,24 +95,26 @@ class BlockNewProducts extends Module
 
 	public function hookRightColumn($params)
 	{
-		global $smarty;
-	
 		$newProducts = Product::getNewProducts((int)($params['cookie']->id_lang), 0, (int)(Configuration::get('NEW_PRODUCTS_NBR')));
-		if (!$newProducts AND !Configuration::get('PS_BLOCK_NEWPRODUCTS_DISPLAY'))
+		if (!$newProducts && !Configuration::get('PS_BLOCK_NEWPRODUCTS_DISPLAY'))
 			return;
-		$smarty->assign(array('new_products' => $newProducts, 'mediumSize' => Image::getSize('medium')));
+
+		$this->smarty->assign(array(
+			'new_products' => $newProducts,
+			'mediumSize' => Image::getSize(ImageType::getFormatedName('medium')),
+		));
 
 		return $this->display(__FILE__, 'blocknewproducts.tpl');
 	}
-	
+
 	public function hookLeftColumn($params)
 	{
 		return $this->hookRightColumn($params);
 	}
-		
+
 	public function hookHeader($params)
 	{
-		Tools::addCSS(($this->_path).'blocknewproducts.css', 'all');
+		$this->context->controller->addCSS(($this->_path).'blocknewproducts.css', 'all');
 	}
 
 }

@@ -19,7 +19,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16478 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -55,7 +54,7 @@ function WishlistCart(id, action, id_product, id_product_attribute, quantity)
 				.animate({ 'width': $element.attr('width')*0.66, 'height': $element.attr('height')*0.66, 'opacity': 0.2, 'top': wishlistBlockOffset.top + 30, 'left': wishlistBlockOffset.left + 15 }, 1000)
 				.fadeOut(800);
 			}
-
+			
 			if($('#' + id).length != 0)
 			{
 				$('#' + id).slideUp('normal');
@@ -102,7 +101,7 @@ function WishlistBuyProduct(token, id_product, id_product_attribute, id_quantity
 		$('#' + id_quantity).val(0);
 		WishlistAddProductCart(token, id_product, id_product_attribute, id_quantity)
 		document.forms['addtocart' + '_' + id_product  + '_' + id_product_attribute].method='POST';
-		document.forms['addtocart' + '_' + id_product  + '_' + id_product_attribute].action=baseDir + 'cart.php';
+		document.forms['addtocart' + '_' + id_product  + '_' + id_product_attribute].action=baseUri + '?controller=cart';
 		document.forms['addtocart' + '_' + id_product  + '_' + id_product_attribute].elements['token'].value = static_token;
 		document.forms['addtocart' + '_' + id_product  + '_' + id_product_attribute].submit();
 	}
@@ -118,7 +117,7 @@ function WishlistAddProductCart(token, id_product, id_product_attribute, id_quan
 		url: baseDir + 'modules/blockwishlist/buywishlistproduct.php',
 		data: 'token=' + token + '&static_token=' + static_token + '&id_product=' + id_product  + '&id_product_attribute=' + id_product_attribute,
 		async: true,
-		cache: false,
+		cache: false, 
 		success: function(data)
 		{
 			if (data)
@@ -214,13 +213,13 @@ function WishlistVisibility(bought_class, id_button)
 	{
 		$('.' + bought_class).slideDown('fast');
 		$('#show' + id_button).hide();
-		$('#hide' + id_button).fadeIn('fast');
+		$('#hide' + id_button).css('display', 'block');
 	}
 	else
 	{
 		$('.' + bought_class).slideUp('fast');
 		$('#hide' + id_button).hide();
-		$('#show' + id_button).fadeIn('fast');
+		$('#show' + id_button).css('display', 'block');
 	}
 }
 

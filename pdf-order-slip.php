@@ -20,28 +20,18 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14007 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
+/**
+ * This file will be removed in 1.6
+ * You have to use index.php?controller=page_name instead of this page
+ *
+ * @deprecated 1.5.0
+ */
+
 include(dirname(__FILE__).'/config/config.inc.php');
-include(dirname(__FILE__).'/init.php');
+Tools::displayFileAsDeprecated();
 
-$cookie = new Cookie('ps');
-if (!$cookie->isLogged())
-	Tools::redirect('authentication.php?back=order-follow.php');
-
-if (isset($_GET['id_order_slip']) AND Validate::isUnsignedId($_GET['id_order_slip']))
-	$orderSlip = new OrderSlip((int)($_GET['id_order_slip']));
-if (!isset($orderSlip) OR !Validate::isLoadedObject($orderSlip))
-    die(Tools::displayError('Order return not found'));
-elseif ($orderSlip->id_customer != $cookie->id_customer)
-    die(Tools::displayError('Order return not found'));
-$order = new Order((int)($orderSlip->id_order));
-if (!Validate::isLoadedObject($order))
-    die(Tools::displayError('Order not found'));
-$order->products = OrderSlip::getOrdersSlipProducts((int)($orderSlip->id), $order);
-$ref = NULL;
-PDF::invoice($order, 'D', false, $ref, $orderSlip);
-
+Tools::redirect('index.php?controller=pdf-order-slip'.($_REQUEST ? '&'.http_build_query($_REQUEST, '', '&') : ''), __PS_BASE_URI__, null, 'HTTP/1.1 301 Moved Permanently');

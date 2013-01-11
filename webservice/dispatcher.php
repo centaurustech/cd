@@ -20,10 +20,13 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16697 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
+
+ob_start();
+
+require_once(dirname(__FILE__).'/../config/config.inc.php');
 
 //set http auth headers for apache+php-cgi work around
 if (isset($_SERVER['HTTP_AUTHORIZATION']) && preg_match('/Basic\s+(.*)$/i', $_SERVER['HTTP_AUTHORIZATION'], $matches))
@@ -38,11 +41,6 @@ if (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) && preg_match('/Basic\s+(.*)$
 	list($name, $password) = explode(':', base64_decode($matches[1]));
 	$_SERVER['PHP_AUTH_USER'] = strip_tags($name);
 }
-
-
-ob_start();
-
-require_once(dirname(__FILE__).'/../config/config.inc.php');
 
 // Use for image management (using the POST method of the browser to simulate the PUT method)
 $method = isset($_REQUEST['ps_method']) ? $_REQUEST['ps_method'] : $_SERVER['REQUEST_METHOD'];
@@ -98,16 +96,21 @@ if (ob_get_length() != 0)
 	header('Content-Type: application/javascript'); // Useful for debug...
 
 // Manage cache
-if (isset($_SERVER['HTTP_LOCAL_CONTENT_SHA1']) && $_SERVER['HTTP_LOCAL_CONTENT_SHA1'] == $result['content_sha1'])
+if (isset($_SERVER['HTTP_LOCAL_CONTENT_SHA1']) && $_SERVER['HTTP_LOCAL_CONTENT_SHA1'] == $result['content_sha1']) {
 	$result['status'] = $_SERVER['SERVER_PROTOCOL'].' 304 Not Modified';
+}
 
 foreach ($result['headers'] as $param_value)
+{
 	header($param_value);
-
+}
 if (isset($result['type']))
 {
+//	header($result['content_sha1']);
 	if (!isset($_SERVER['HTTP_LOCAL_CONTENT_SHA1']) || $_SERVER['HTTP_LOCAL_CONTENT_SHA1'] != $result['content_sha1'])
+	{
 		echo $result['content'];
+	}
 		
 }
 ob_end_flush();

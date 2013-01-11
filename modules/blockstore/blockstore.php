@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,7 +29,7 @@ if (!defined('_PS_VERSION_'))
 
 class BlockStore extends Module
 {
-	function __construct()
+	public function __construct()
 	{
 		$this->name = 'blockstore';
 		$this->tab = 'front_office_features';
@@ -44,10 +43,10 @@ class BlockStore extends Module
 		$this->description = $this->l('Displays a block with a link to the store locator.');
 	}
 
-	function install()
+	public function install()
 	{
 		Configuration::updateValue('BLOCKSTORE_IMG', 'store.jpg');
-		return (parent::install() AND $this->registerHook('rightColumn') AND $this->registerHook('header'));
+		return parent::install() && $this->registerHook('rightColumn') && $this->registerHook('header');
 	}
 
 	public function uninstall()
@@ -56,31 +55,35 @@ class BlockStore extends Module
 		return parent::uninstall();
 	}
 
-	function hookLeftColumn($params)
+	public function hookLeftColumn($params)
 	{
 		return $this->hookRightColumn($params);
 	}
-	
-	function hookRightColumn($params)
+
+	public function hookRightColumn($params)
 	{
-		global $smarty;
-		
-		$smarty->assign('store_img', Configuration::get('BLOCKSTORE_IMG'));
-		return $this->display(__FILE__, 'blockstore.tpl');
+		$this->smarty->assign('store_img', Configuration::get('BLOCKSTORE_IMG'));
+		$sql = 'SELECT COUNT(*)
+				FROM '._DB_PREFIX_.'store s'
+				.Shop::addSqlAssociation('store', 's');
+		$total = Db::getInstance()->getValue($sql);
+
+		if ($total > 0)
+			return $this->display(__FILE__, 'blockstore.tpl');
 	}
-	
-	function hookHeader($params)
+
+	public function hookHeader($params)
 	{
-		Tools::addCSS($this->_path.'blockstore.css', 'all');
+		$this->context->controller->addCSS($this->_path.'blockstore.css', 'all');
 	}
-	
+
 	public function postProcess()
 	{
 		if (Tools::isSubmit('submitStoreConf'))
 		{
-			if (isset($_FILES['store_img']) AND isset($_FILES['store_img']['tmp_name']) AND !empty($_FILES['store_img']['tmp_name']))
+			if (isset($_FILES['store_img']) && isset($_FILES['store_img']['tmp_name']) && !empty($_FILES['store_img']['tmp_name']))
 			{
-				if ($error = checkImage($_FILES['store_img'], 4000000))
+				if ($error = ImageManager::validateUpload($_FILES['store_img'], 4000000))
 					return $this->displayError($this->l('invalid image'));
 				else
 				{
@@ -88,7 +91,7 @@ class BlockStore extends Module
 						return $this->displayError($this->l('an error occurred on uploading file'));
 					else
 					{
-						if (Configuration::get('BLOCKSTORE_IMG') != $_FILES['store_img']['name'])
+						if (Configuration::hasContext('BLOCKSTORE_IMG', null, Shop::getContext()) && Configuration::get('BLOCKSTORE_IMG') != $_FILES['store_img']['name'])
 							@unlink(dirname(__FILE__).'/'.Configuration::get('BLOCKSTORE_IMG'));
 						Configuration::updateValue('BLOCKSTORE_IMG', $_FILES['store_img']['name']);
 						return $this->displayConfirmation($this->l('Settings are updated'));
@@ -98,7 +101,7 @@ class BlockStore extends Module
 		}
 		return '';
 	}
-	
+
 	public function getContent()
 	{
 		$output = $this->postProcess().'
@@ -112,7 +115,7 @@ class BlockStore extends Module
 				<div class="margin-form">
 					<input id="store_img" type="file" name="store_img" /> ( '.$this->l('image will be displayed as 174x115').' )
 				</div>
-		
+
 				<p class="center">
 					<input class="button" type="submit" name="submitStoreConf" value="'.$this->l('Save').'"/>
 				</p>

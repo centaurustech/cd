@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -39,13 +38,12 @@ class Watermark extends Module
 	private $transparency;
 	private $imageTypes = array();
 	private	$watermarkTypes;
-	private $maxImageSize = 100000;
 
 	public function __construct()
 	{
 		$this->name = 'watermark';
 		$this->tab = 'administration';
-		$this->version = 0.1;
+		$this->version = '0.3';
 		$this->author = 'PrestaShop';
 		
 		parent::__construct();
@@ -65,13 +63,13 @@ class Watermark extends Module
 		$this->displayName = $this->l('Watermark');
 		$this->description = $this->l('Protect image by watermark.');
 		$this->confirmUninstall = $this->l('Are you sure you want to delete your details ?');
-		if (!isset($this->transparency) OR !isset($this->xAlign) OR !isset($this->yAlign))
+		if (!isset($this->transparency) || !isset($this->xAlign) || !isset($this->yAlign))
 			$this->warning = $this->l('Watermark image must be uploaded in order for this module to work correctly.');
 	}
 
 	public function install()
 	{
-		if (!parent::install() OR !$this->registerHook('watermark'))
+		if (!parent::install() || !$this->registerHook('watermark'))
 			return false;
 		Configuration::updateValue('WATERMARK_TRANSPARENCY', 60);
 		Configuration::updateValue('WATERMARK_Y_ALIGN', 'bottom');
@@ -82,10 +80,10 @@ class Watermark extends Module
 	public function uninstall()
 	{
 		return (parent::uninstall()
-			AND Configuration::deleteByName('WATERMARK_TYPES')
-			AND Configuration::deleteByName('WATERMARK_TRANSPARENCY')
-			AND Configuration::deleteByName('WATERMARK_Y_ALIGN')
-			AND Configuration::deleteByName('WATERMARK_X_ALIGN'));
+			&& Configuration::deleteByName('WATERMARK_TYPES')
+			&& Configuration::deleteByName('WATERMARK_TRANSPARENCY')
+			&& Configuration::deleteByName('WATERMARK_Y_ALIGN')
+			&& Configuration::deleteByName('WATERMARK_X_ALIGN'));
 	}
 
 	private function _postValidation()
@@ -112,43 +110,51 @@ class Watermark extends Module
 		if (empty($image_types))
 			$this->_postErrors[] = $this->l('At least one image type is required.');
 
-		if (isset($_FILES['PS_WATERMARK']['tmp_name']) AND !empty($_FILES['PS_WATERMARK']['tmp_name']))
+		if (isset($_FILES['PS_WATERMARK']['tmp_name']) && !empty($_FILES['PS_WATERMARK']['tmp_name']))
 		{
-			if (!isPicture($_FILES['PS_WATERMARK'], array('image/gif')))
+			if (!ImageManager::isRealImage($_FILES['PS_WATERMARK']['tmp_name'], $_FILES['PS_WATERMARK']['type'], array('image/gif')))
 				$this->_postErrors[] = $this->l('Image must be in GIF format.');
 		}
 		
-		return !sizeof($this->_postErrors) ? true : false;
+		return !count($this->_postErrors) ? true : false;
 	}
 
-	private function _postProcess(){	
-		
+	private function _postProcess()
+	{
 		Configuration::updateValue('WATERMARK_TYPES', implode(',', Tools::getValue('image_types')));
 		Configuration::updateValue('WATERMARK_Y_ALIGN', Tools::getValue('yalign'));
 		Configuration::updateValue('WATERMARK_X_ALIGN', Tools::getValue('xalign'));
 		Configuration::updateValue('WATERMARK_TRANSPARENCY', Tools::getValue('transparency'));
 
+		if (Shop::getContext() == Shop::CONTEXT_SHOP)
+			$str_shop = '-'.(int)$this->context->shop->id;
+		else
+			$str_shop = '';
 		//submited watermark
-		if (isset($_FILES['PS_WATERMARK']) AND !empty($_FILES['PS_WATERMARK']['tmp_name']))
+		if (isset($_FILES['PS_WATERMARK']) && !empty($_FILES['PS_WATERMARK']['tmp_name']))
 		{
 			/* Check watermark validity */
-			if ($error = checkImage($_FILES['PS_WATERMARK'], $this->maxImageSize))
+			if ($error = ImageManager::validateUpload($_FILES['PS_WATERMARK']))
 				$this->_errors[] = $error;
 			/* Copy new watermark */
-			elseif (!copy($_FILES['PS_WATERMARK']['tmp_name'], dirname(__FILE__).'/watermark.gif'))
-				$this->_errors[] = Tools::displayError('an error occurred while uploading watermark: '.$_FILES['PS_WATERMARK']['tmp_name'].' to '.$dest);
+			elseif (!copy($_FILES['PS_WATERMARK']['tmp_name'], dirname(__FILE__).'/watermark'.$str_shop.'.gif'))
+				$this->_errors[] = sprintf($this->l('An error occurred while uploading watermark: %1$s to %2$s'), $_FILES['PS_WATERMARK']['tmp_name'], dirname(__FILE__).'/watermark'.$str_shop.'.gif');
 		}
-		
+
 		if ($this->_errors)
 			foreach ($this->_errors as $error)
 				$this->_html .= '<div class="module_error alert error"><img src="../img/admin/warning.gif" alt="'.$this->l('ok').'" /> '.$this->l($error).'</div>';
 		else
-			$this->_html .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('ok').'" /> '.$this->l('Settings updated').'</div>';
+			$this->_html .= '<div class="conf confirm">'.$this->l('Settings updated').'</div>';
 	}
 
 	private function _displayForm()
 	{
 	    $imageTypes = ImageType::getImagesTypes('products');
+	   $str_shop = '-'.(int)$this->context->shop->id;
+		if (Shop::getContext() != Shop::CONTEXT_SHOP || !Tools::file_exists_cache(dirname(__FILE__).'/watermark'.$str_shop.'.gif'))
+			$str_shop = '';
+
 		$this->_html .=
 		'<form action="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'" method="post" enctype="multipart/form-data">
 			<fieldset><legend><img src="../modules/'.$this->name.'/logo.gif" />'.$this->l('Watermark details').'</legend>
@@ -156,7 +162,7 @@ class Watermark extends Module
 				<table border="0" width="500" cellpadding="0" cellspacing="0" id="form">
 					<tr>
 						<td />
-						<td>'.(file_exists(dirname(__FILE__).'/watermark.gif') ? '<img src="../modules/'.$this->name.'/watermark.gif?t='.time().'" />' : $this->l('No watermark uploaded.')).'</td>
+						<td>'.(Tools::file_exists_cache(dirname(__FILE__).'/watermark'.$str_shop.'.gif') ? '<img src="../modules/'.$this->name.'/watermark'.$str_shop.'.gif?t='.time().'" />' : $this->l('No watermark uploaded.')).'</td>
 					</tr>
 					<tr>
 						<td>'.$this->l('Watermark file').'</td>
@@ -167,12 +173,12 @@ class Watermark extends Module
 					</tr>
 					<tr>
 						<td width="270" style="height: 35px;">'.$this->l('Watermark transparency (0-100)').'</td>
-					    <td><input type="text" name="transparency" value="'.Tools::getValue('transparency', Configuration::get('WATERMARK_TRANSPARENCY')).'" style="width: 30px;" /></td>
+					    <td><input type="text" name="transparency" value="'.(float)Tools::getValue('transparency', Configuration::get('WATERMARK_TRANSPARENCY')).'" style="width: 30px;" /></td>
 					</tr>
 					<tr><td width="270" style="height: 35px;">'.$this->l('Watermark X align').'</td>
 					    <td>
 						<select id="xalign" name = "xalign">';
-					    foreach($this->xaligns as $align)
+					    foreach ($this->xaligns as $align)
 						    $this->_html .= '<option value="'.$align.'"'.(Tools::getValue('xalign', Configuration::get('WATERMARK_X_ALIGN')) == $align ? ' selected="selected"' : '' ).'>'.$this->l($align).'</option>';
 					    $this->_html .= '</select>
 					    </td>
@@ -180,14 +186,14 @@ class Watermark extends Module
 					<tr><td width="270" style="height: 35px;">'.$this->l('Watermark Y align').'</td>
 					    <td>
 						<select id="yalign" name = "yalign">';
-					    foreach($this->yaligns as $align)
+					    foreach ($this->yaligns as $align)
 						    $this->_html .= '<option value="'.$align.'"'.(Tools::getValue('yalign', Configuration::get('WATERMARK_Y_ALIGN')) == $align ? ' selected="selected"' : '' ).'>'.$this->l($align).'</option>';
 					    $this->_html .= '</select>
 					    </td>
 					</tr>
 					<tr><td width="270" style="height: 35px;">'.$this->l('Choose image types for watermark protection.').'</td><td>';
 					$selected_types = explode(',', Configuration::get('WATERMARK_TYPES'));
-					foreach(ImageType::getImagesTypes('products') as $type)
+					foreach (ImageType::getImagesTypes('products') as $type)
 					{
 					    $this->_html .= '<label style="float:none; ">
 						<input type="checkbox" value="'.$type['id_image_type'].'" name="image_types[]"'.
@@ -206,14 +212,14 @@ class Watermark extends Module
 	{
 		$this->_html = '<h2>'.$this->displayName.'</h2>';
 
-		if (!empty($_POST))
+		if (Tools::isSubmit('btnSubmit'))
 		{
 			$this->_postValidation();
-			if (!sizeof($this->_postErrors))
+			if (!count($this->_postErrors))
 				$this->_postProcess();
 			else
-				foreach ($this->_postErrors AS $err)
-					$this->_html .= '<div class="alert error">'. $err .'</div>';
+				foreach ($this->_postErrors as $err)
+					$this->_html .= '<div class="alert error">'.$err.'</div>';
 		}
 		else
 			$this->_html .= '<br />';
@@ -222,43 +228,57 @@ class Watermark extends Module
 
 		return $this->_html;
 	}
-	
-	//we assume here only jpg files
+
+	// Retrocompatibility
 	public function hookwatermark($params)
 	{
-		global $smarty;
+		$this->hookActionWatermark($params);
+	}
+
+	public function hookActionWatermark($params)
+	{
 		$image = new Image($params['id_image']);
 		$image->id_product = $params['id_product'];
 		$file = _PS_PROD_IMG_DIR_.$image->getExistingImgPath().'-watermark.jpg';
-		
+
+		$str_shop = '-'.(int)$this->context->shop->id;
+		if (Shop::getContext() != Shop::CONTEXT_SHOP || !Tools::file_exists_cache(dirname(__FILE__).'/watermark'.$str_shop.'.gif'))
+			$str_shop = '';
+
 		//first make a watermark image
-		$return = $this->watermarkByImage(_PS_PROD_IMG_DIR_.$image->getExistingImgPath().'.jpg',  dirname(__FILE__).'/watermark.gif', $file, 23, 0, 0, 'right');
+		$return = $this->watermarkByImage(_PS_PROD_IMG_DIR_.$image->getExistingImgPath().'.jpg', dirname(__FILE__).'/watermark'.$str_shop.'.gif', $file, 23, 0, 0, 'right');
 
 		//go through file formats defined for watermark and resize them
-		foreach($this->imageTypes as $imageType)
+		foreach ($this->imageTypes as $imageType)
 		{
-		    $newFile = _PS_PROD_IMG_DIR_.$image->getExistingImgPath().'-'.stripslashes($imageType['name']).'.jpg';
-		    if (!imageResize($file, $newFile, (int)($imageType['width']), (int)($imageType['height'])))
-				$return = false;    
+			$newFile = _PS_PROD_IMG_DIR_.$image->getExistingImgPath().'-'.stripslashes($imageType['name']).'.jpg';
+			if (!ImageManager::resize($file, $newFile, (int)$imageType['width'], (int)$imageType['height']))
+				$return = false;
 		}
 		return $return;
 	}
 
 	private function watermarkByImage($imagepath, $watermarkpath, $outputpath)
-	{	
+	{
 		$Xoffset = $Yoffset = $xpos = $ypos = 0;
 		if (!$image = imagecreatefromjpeg($imagepath))
 			return false;
-		if (!$imagew = imagecreatefromgif ($watermarkpath))
+		if (!$imagew = imagecreatefromgif($watermarkpath))
 			die ($this->l('The watermark image is not a real gif, please CONVERT the image.'));
 		list($watermarkWidth, $watermarkHeight) = getimagesize($watermarkpath); 
 		list($imageWidth, $imageHeight) = getimagesize($imagepath); 
-		if ($this->xAlign == "middle") { $xpos = $imageWidth/2 - $watermarkWidth/2 + $Xoffset; } 
-		if ($this->xAlign == "left") { $xpos = 0 + $Xoffset; } 
-		if ($this->xAlign == "right") { $xpos = $imageWidth - $watermarkWidth - $Xoffset; } 
-		if ($this->yAlign == "middle") { $ypos = $imageHeight/2 - $watermarkHeight/2 + $Yoffset; } 
-		if ($this->yAlign == "top") { $ypos = 0 + $Yoffset; } 
-		if ($this->yAlign == "bottom") { $ypos = $imageHeight - $watermarkHeight - $Yoffset; } 
+		if ($this->xAlign == 'middle')
+			$xpos = $imageWidth / 2 - $watermarkWidth / 2 + $Xoffset;
+		if ($this->xAlign == 'left')
+			$xpos = 0 + $Xoffset;
+		if ($this->xAlign == 'right')
+			$xpos = $imageWidth - $watermarkWidth - $Xoffset;
+		if ($this->yAlign == 'middle')
+			$ypos = $imageHeight / 2 - $watermarkHeight / 2 + $Yoffset;
+		if ($this->yAlign == 'top')
+			$ypos = 0 + $Yoffset;
+		if ($this->yAlign == 'bottom')
+			$ypos = $imageHeight - $watermarkHeight - $Yoffset;
 		if (!imagecopymerge($image, $imagew, $xpos, $ypos, 0, 0, $watermarkWidth, $watermarkHeight, $this->transparency))
 			return false;
 		return imagejpeg($image, $outputpath, 100); 

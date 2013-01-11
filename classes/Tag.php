@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16513 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,174 +27,188 @@
 class TagCore extends ObjectModel
 {
  	/** @var integer Language id */
-	public 		$id_lang;
-	
- 	/** @var string Name */
-	public 		$name;
-	
- 	protected 	$fieldsRequired = array('id_lang', 'name');
- 	protected 	$fieldsValidate = array('id_lang' => 'isUnsignedId', 'name' => 'isGenericName');
+	public $id_lang;
 
-	protected 	$table = 'tag';
-	protected 	$identifier = 'id_tag';
-	
-	protected	$webserviceParameters = array(
-	'fields' => array(
-	'id_lang' => array('xlink_resource' => 'languages'),
-	),
+ 	/** @var string Name */
+	public $name;
+
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'tag',
+		'primary' => 'id_tag',
+		'fields' => array(
+			'id_lang' => 	array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
+			'name' => 		array('type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => true),
+		),
 	);
-	
-	public function __construct($id = NULL, $name = NULL, $id_lang = NULL)
+
+
+	protected $webserviceParameters = array(
+		'fields' => array(
+			'id_lang' => array('xlink_resource' => 'languages'),
+		),
+	);
+
+	public function __construct($id = null, $name = null, $id_lang = null)
 	{
+		$this->def = Tag::getDefinition($this);
+		$this->setDefinitionRetrocompatibility();
+
 		if ($id)
 			parent::__construct($id);
-		elseif ($name AND Validate::isGenericName($name) AND $id_lang AND Validate::isUnsignedId($id_lang))
+		else if ($name && Validate::isGenericName($name) && $id_lang && Validate::isUnsignedId($id_lang))
 		{
 			$row = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
 			SELECT *
 			FROM `'._DB_PREFIX_.'tag` t
-			WHERE `name` LIKE \''.pSQL($name).'\' AND `id_lang` = '.(int)($id_lang));
-			
+			WHERE `name` LIKE \''.pSQL($name).'\' AND `id_lang` = '.(int)$id_lang);
+
 			if ($row)
 			{
-			 	$this->id = (int)($row['id_tag']);
-			 	$this->id_lang = (int)($row['id_lang']);
+			 	$this->id = (int)$row['id_tag'];
+			 	$this->id_lang = (int)$row['id_lang'];
 				$this->name = $row['name'];
 			}
 		}
 	}
-		
-	public function getFields()
+
+	public function add($autodate = true, $null_values = false)
 	{
-		parent::validateFields();
-		$fields['id_lang'] = (int)($this->id_lang);
-		$fields['name'] = pSQL($this->name);
-		return $fields;
-	}
-	
-	public function add($autodate = true, $nullValues = false)
-	{
-		if (!parent::add($autodate, $nullValues))
+		if (!parent::add($autodate, $null_values))
 			return false;
-		elseif (isset($_POST['products']))
+		else if (isset($_POST['products']))
 			return $this->setProducts(Tools::getValue('products'));
-		return true;		
+		return true;
 	}
-	
+
 	/**
 	* Add several tags in database and link it to a product
 	*
 	* @param integer $id_lang Language id
 	* @param integer $id_product Product id to link tags with
-	* @param string $string Tags separated by commas
-	*
+	* @param string|array $tag_list List of tags, as array or as a string with comas
 	* @return boolean Operation success
 	*/
-	public static function addTags($id_lang, $id_product, $string)
+	public static function addTags($id_lang, $id_product, $tag_list, $separator = ',')
 	{
-	 	if (!Validate::isUnsignedId($id_lang) OR !Validate::isTagsList($string))
+	 	if (!Validate::isUnsignedId($id_lang))
 			return false;
-	 	
-	 	$tmpTab = array_unique(array_map('trim', preg_split('/,/', $string, NULL, PREG_SPLIT_NO_EMPTY)));
+
+		if (!is_array($tag_list))
+	 		$tag_list = array_filter(array_unique(array_map('trim', preg_split('#\\'.$separator.'#', $tag_list, null, PREG_SPLIT_NO_EMPTY))));
+
 	 	$list = array();
-	 	foreach ($tmpTab AS $tag)
-	 	{
+		foreach ($tag_list as $tag)
+		{
 	 	 	if (!Validate::isGenericName($tag))
 	 	 		return false;
-			$tagObj = new Tag(NULL, trim($tag), (int)($id_lang));
-			
+			$tag_obj = new Tag(null, trim($tag), (int)$id_lang);
+
 			/* Tag does not exist in database */
-			if (!Validate::isLoadedObject($tagObj))
+			if (!Validate::isLoadedObject($tag_obj))
 			{
-				$tagObj->name = trim($tag);
-				$tagObj->id_lang = (int)($id_lang);
-				$tagObj->add();
+				$tag_obj->name = trim($tag);
+				$tag_obj->id_lang = (int)$id_lang;
+				$tag_obj->add();
 			}
-			if (!in_array($tagObj->id, $list))
-				$list[] = $tagObj->id;
+			if (!in_array($tag_obj->id, $list))
+				$list[] = $tag_obj->id;
 		}
 		$data = '';
-		foreach ($list AS $tag)
-			$data .= '('.(int)($tag).','.(int)($id_product).'),';
+		foreach ($list as $tag)
+			$data .= '('.(int)$tag.','.(int)$id_product.'),';
 		$data = rtrim($data, ',');
 
-		return Db::getInstance()->Execute('
-		INSERT INTO `'._DB_PREFIX_.'product_tag` (`id_tag`, `id_product`) 
+		return Db::getInstance()->execute('
+		INSERT INTO `'._DB_PREFIX_.'product_tag` (`id_tag`, `id_product`)
 		VALUES '.$data);
 	}
-	
+
 	public static function getMainTags($id_lang, $nb = 10)
 	{
-		$customerGroups = FrontController::getCurrentCustomerGroups();
+		$groups = FrontController::getCurrentCustomerGroups();
+		$sql_groups = (count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1');
 
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-		SELECT t.`name`, COUNT(pt.`id_tag`) times
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+		SELECT t.name, COUNT(pt.id_tag) AS times
 		FROM `'._DB_PREFIX_.'product_tag` pt
-		LEFT JOIN `'._DB_PREFIX_.'tag` t ON (t.`id_tag` = pt.`id_tag`)
-		LEFT JOIN `'._DB_PREFIX_.'product` p ON (p.`id_product` = pt.`id_product`)
-		WHERE t.`id_lang` = '.(int)$id_lang.' AND p.`active` = 1
-		AND p.`id_product` IN (
+		LEFT JOIN `'._DB_PREFIX_.'tag` t ON (t.id_tag = pt.id_tag)
+		LEFT JOIN `'._DB_PREFIX_.'product` p ON (p.id_product = pt.id_product)
+		'.Shop::addSqlAssociation('product', 'p').'
+		WHERE t.`id_lang` = '.(int)$id_lang.'
+		AND product_shop.`active` = 1
+		AND product_shop.`id_product` IN (
 			SELECT cp.`id_product`
 			FROM `'._DB_PREFIX_.'category_group` cg
 			LEFT JOIN `'._DB_PREFIX_.'category_product` cp ON (cp.`id_category` = cg.`id_category`)
-			LEFT JOIN `'._DB_PREFIX_.'category` c ON (c.`id_category` = cp.`id_category`)
-			WHERE c.`active` = 1 AND cg.`id_group` '.(count($customerGroups) ? 'IN ('.implode(',', $customerGroups).')' : '= 1').'
+			WHERE cg.`id_group` '.$sql_groups.'
 		)
-		GROUP BY t.`id_tag`
+		GROUP BY t.id_tag
 		ORDER BY times DESC
 		LIMIT 0, '.(int)$nb);
 	}
-	
+
 	public static function getProductTags($id_product)
 	{
-	 	if (!$tmp = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
-		SELECT t.`id_lang`, t.`name` 
-		FROM '._DB_PREFIX_.'tag t 
-		LEFT JOIN '._DB_PREFIX_.'product_tag pt ON (pt.id_tag = t.id_tag) 
+	 	if (!$tmp = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+		SELECT t.`id_lang`, t.`name`
+		FROM '._DB_PREFIX_.'tag t
+		LEFT JOIN '._DB_PREFIX_.'product_tag pt ON (pt.id_tag = t.id_tag)
 		WHERE pt.`id_product`='.(int)$id_product))
 	 		return false;
 	 	$result = array();
-	 	foreach ($tmp AS $tag)
+	 	foreach ($tmp as $tag)
 	 		$result[$tag['id_lang']][] = $tag['name'];
 	 	return $result;
 	}
-	
-	public function getProducts($associated = true)
+
+	public function getProducts($associated = true, Context $context = null)
 	{
-		global $cookie;
-		$id_lang = $this->id_lang ? $this->id_lang : $cookie->id_lang;
-		
-		if (!$this->id AND $associated)
+		if (!$context)
+			$context = Context::getContext();
+		$id_lang = $this->id_lang ? $this->id_lang : $context->language->id;
+
+		if (!$this->id && $associated)
 			return array();
-		
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('
+
+		$in = $associated ? 'IN' : 'NOT IN';
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
 		SELECT pl.name, pl.id_product
 		FROM `'._DB_PREFIX_.'product` p
-		LEFT JOIN `'._DB_PREFIX_.'product_lang` pl ON p.id_product = pl.id_product
+		LEFT JOIN `'._DB_PREFIX_.'product_lang` pl ON p.id_product = pl.id_product'.Shop::addSqlRestrictionOnLang('pl').'
+		'.Shop::addSqlAssociation('product', 'p').'
 		WHERE pl.id_lang = '.(int)$id_lang.'
-		AND p.active = 1
-		'.($this->id ? ('AND p.id_product '.($associated ? 'IN' : 'NOT IN').' (SELECT pt.id_product FROM `'._DB_PREFIX_.'product_tag` pt WHERE pt.id_tag = '.(int)$this->id.')') : '').'
+		AND product_shop.active = 1
+		'.($this->id ? ('AND p.id_product '.$in.' (SELECT pt.id_product FROM `'._DB_PREFIX_.'product_tag` pt WHERE pt.id_tag = '.(int)$this->id.')') : '').'
 		ORDER BY pl.name');
 	}
-	
+
 	public function setProducts($array)
 	{
-		Db::getInstance()->Execute('DELETE FROM '._DB_PREFIX_.'product_tag WHERE id_tag = '.(int)$this->id);
+		$result = Db::getInstance()->execute('DELETE FROM '._DB_PREFIX_.'product_tag WHERE id_tag = '.(int)$this->id);
 		if (is_array($array))
 		{
 			$array = array_map('intval', $array);
-			$result1 = Db::getInstance()->Execute('UPDATE '._DB_PREFIX_.'product SET indexed = 0 WHERE id_product IN ('.implode(',', array_map('intval', $array)).')');
+			$result &= ObjectModel::updateMultishopTable('Product', array('indexed' => 0), 'a.id_product IN ('.implode(',', $array).')');
 			$ids = array();
 			foreach ($array as $id_product)
 				$ids[] = '('.(int)$id_product.','.(int)$this->id.')';
-			return ($result1 && Db::getInstance()->Execute('INSERT INTO '._DB_PREFIX_.'product_tag (id_product, id_tag) VALUES '.implode(',',$ids)) && Search::indexation(false));
+
+			if ($result)
+			{
+				$result &= Db::getInstance()->execute('INSERT INTO '._DB_PREFIX_.'product_tag (id_product, id_tag) VALUES '.implode(',', $ids));
+				if (Configuration::get('PS_SEARCH_INDEXATION'))
+					$result &= Search::indexation(false);
+			}
 		}
-		return $result1;
+		return $result;
 	}
-	
+
 	public static function deleteTagsForProduct($id_product)
 	{
-		return Db::getInstance()->Execute('DELETE FROM `'._DB_PREFIX_.'product_tag` WHERE `id_product` = '.(int)($id_product));
+		return Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'product_tag` WHERE `id_product` = '.(int)$id_product);
 	}
 }
 

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16655 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -36,8 +35,6 @@ class Newsletter extends Module
 
 	public function __construct()
 	{
-		global $cookie;
-
 		$this->name = 'newsletter';
 		$this->tab = 'administration';
 		$this->version = 2.0;
@@ -48,18 +45,18 @@ class Newsletter extends Module
 
 		$this->displayName = $this->l('Newsletter');
 		$this->description = $this->l('Generates a .CSV file for mass mailings');
-		
+
 		if ($this->id)
 		{
 			$this->_file = 'export_'.Configuration::get('PS_NEWSLETTER_RAND').'.csv';
 			$this->_postValid = array();
 
 			// Getting data...
-			$all_countries = Country::getCountries((int)$cookie->id_lang, false, false, false);
+			$_countries = Country::getCountries($this->context->language->id);
 
 			// ...formatting array
 			$countries[0] = $this->l('All countries');
-			foreach ($all_countries as $country)
+			foreach ($_countries as $country)
 				$countries[$country['id_country']] = $country['name'];
 
 			// And filling fields to show !
@@ -91,17 +88,14 @@ class Newsletter extends Module
 
 	public function install()
 	{
-		return (parent::install() && Configuration::updateValue('PS_NEWSLETTER_RAND', rand().rand()));
+		return (parent::install() AND Configuration::updateValue('PS_NEWSLETTER_RAND', rand().rand()));
 	}
-	
+
 	private function _postProcess()
 	{
-		// Get var 'action'
-		$action = Tools::getValue('action');
-
-		if (Tools::getValue('submitExport') && $action)
+		if (isset($_POST['submitExport']) AND isset($_POST['action']))
 		{
-			if ($action == 'customers')
+			if ($_POST['action'] == 'customers')
 				$result = $this->_getCustomers();
 			else
 			{
@@ -110,51 +104,48 @@ class Newsletter extends Module
 				else
 					$result = $this->_getBlockNewsletter();
 			}
-
-			if ($fd = @fopen(dirname(__FILE__).'/'.strval(preg_replace('#\.{2,}#', '.', $action)).'_'.$this->_file, 'w'))
+			if (!$nb = (int)(Db::getInstance(_PS_USE_SQL_SLAVE_)->NumRows()))
+				$this->_html .= $this->displayError($this->l('No customers found with these filters!'));
+			elseif ($fd = @fopen(dirname(__FILE__).'/'.strval(preg_replace('#\.{2,}#', '.', $_POST['action'])).'_'.$this->_file, 'w'))
 			{
-				foreach ($result as $tab)
+				foreach ($result AS $tab)
 					$this->_my_fputcsv($fd, $tab);
-
 				fclose($fd);
-
-				$nb = count($result) > 1 ? count($result) - 1  : 0;
 				$this->_html .= $this->displayConfirmation(
-				$this->l('The .CSV file has been successfully exported.').
-				' ('.$nb.' '.$this->l('customers found').')<br />
-				<a href="../modules/newsletter/'.Tools::safeOutput(strval($action)).'_'.$this->_file.'"><b>'.$this->l('Download the file').' '.$this->_file.'</b></a>
+				sprintf($this->l('The .CSV file has been successfully exported. (%d customers found)'), $nb).'<br />
+				<a href="../modules/newsletter/'.Tools::safeOutput(strval($_POST['action'])).'_'.$this->_file.'"><b>'.$this->l('Download the file').' '.$this->_file.'</b></a>
 				<br />
 				<ol style="margin-top: 10px;">
 					<li style="color: red;">'.$this->l('WARNING: If opening this .csv file with Excel, remember to choose UTF-8 encoding or you may see strange characters.').'</li>
 				</ol>');
 			}
 			else
-				$this->_html .= $this->displayError($this->l('Error: cannot write').' '.dirname(__FILE__).'/'.strval($action).'_'.$this->_file.' !');
+				$this->_html .= $this->displayError($this->l('Error: cannot write').' '.dirname(__FILE__).'/'.strval($_POST['action']).'_'.$this->_file.' !');
 		}
 	}
 
 	private function _getCustomers()
 	{
-		// Get POST vars
-		$suscribers = (int)Tools::getValue('SUSCRIBERS');
-		$optin = (int)Tools::getValue('OPTIN');
-		$country = (int)Tools::getValue('COUNTRY');
+		$dbquery = new DbQuery();
+		$dbquery->select('c.`id_customer`, c.`lastname`, c.`firstname`, c.`email`, c.`ip_registration_newsletter`, c.`newsletter_date_add`')
+				->from('customer', 'c')
+				->groupBy('c.`email`');
 
-		$sql = '
-			SELECT c.`id_customer`, c.`lastname`, c.`firstname`, c.`email`, c.`ip_registration_newsletter`, c.`newsletter_date_add`
-			FROM `'._DB_PREFIX_.'customer` c
-			WHERE 1
-			'.(($suscribers && $suscribers != 0) ? 'AND c.`newsletter` = '.($suscribers - 1) : '').'
-			'.(($optin && $optin != 0) ? 'AND c.`optin` = '.($optin - 1) : '').'
-			'.(($country && $country != 0) ? 'AND (
-				SELECT COUNT(a.`id_address`) as nb_country
-				FROM `'._DB_PREFIX_.'address` a
-				WHERE a.deleted = 0
-					AND a.`id_customer` = c.`id_customer`
-					AND a.`id_country` = '.(int)$country.'
-			) >= 1' : '').' GROUP BY c.`email`';
+		if (Tools::getValue('SUSCRIBERS'))
+			$dbquery->where('c.`newsletter` = '.((int)Tools::getValue('SUSCRIBERS') - 1));
 
-		$rq = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
+		if (Tools::getValue('OPTIN'))
+			$dbquery->where('c.`optin` = '.((int)Tools::getValue('OPTIN') - 1));
+
+		if (Tools::getValue('COUNTRY'))
+			$dbquery->where('(SELECT COUNT(a.`id_address`) as nb_country
+								FROM `'._DB_PREFIX_.'address` a
+								WHERE a.deleted = 0
+								AND a.`id_customer` = c.`id_customer`
+								AND a.`id_country` = '.(int)Tools::getValue('COUNTRY').') >= 1');
+
+
+		$rq = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($dbquery->build());
 
 		$header = array('id_customer', 'lastname', 'firstname', 'email', 'ip_address', 'newsletter_date_add');
 		$result = (is_array($rq) ? array_merge(array($header), $rq) : $header);
@@ -164,9 +155,10 @@ class Newsletter extends Module
 	private function _getBlockNewsletter()
 	{
 		$rq = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
-			SELECT *
-			FROM `'._DB_PREFIX_.'newsletter`
-		');
+		SELECT `id`, `email`, `newsletter_date_add`, `ip_registration_newsletter`
+		FROM `'._DB_PREFIX_.'newsletter`
+		WHERE `active` = 1');
+
 		$header = array('id_customer', 'email', 'newsletter_date_add', 'ip_address', 'http_referer');
 		$result = (is_array($rq) ? array_merge(array($header), $rq) : $header);
 		return $result;
@@ -182,34 +174,32 @@ class Newsletter extends Module
 
 	private function _displayFormExport()
 	{
-		$request_uri = Tools::safeOutput($_SERVER['REQUEST_URI']);
-
 		$this->_html .= '
 		<fieldset class="width3">
-		'.$this->l('This module is divided into 2 sections:').'
+		'.$this->l('There are two sorts for this module:').'
 		<p><ol>
 			<li>
-				'.$this->l('Persons who have indicated their address on the newsletter subscription form via the home page.').'<br />
+				'.$this->l('Persons who have subscribed using the BlockNewsletter block in the front office.').'<br />
 				'.$this->l('This is a list of e-mail addresses of persons who come to your store that do not become customers, but have subscribed to your newsletter. Using the "Export Newsletter Subscribers" below will generate a .CSV file based on the BlockNewsletter subscribers data.').'<br /><br />'.'
 			</li>
 			<li>
-				'.$this->l('Customers that have checked "yes" to be included in the newsletter distribution list.').'<br />
-				'.$this->l('This list can be filtered according to the type of customer').'
+				'.$this->l('Customers that have checked "yes" to receive a newsletter in their customer profile.').'<br />
+				'.$this->l('The "Export Customers" section below filters which customers you want to send a newsletter to.').'
 			</li>
 		</ol>
 		</p>
 		</fieldset><br />
-		<fieldset class="width3"><legend>'.$this->l('Export Newsletter Subscribers').'</legend>
-		<form action="'.$request_uri.'" method="post">
+		<fieldset class="width3"><legend>'.$this->l('Export Newsletter Subscribers from the BlockNewsletter').'</legend>
+		<form action="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'" method="post">
 			<input type="hidden" name="action" value="blockNewsletter">
-			'.$this->l('Generate a .CSV file based on BlockNewsletter subscribers data.').'.<br /><br />';
+			'.$this->l('Generate a .CSV file based on BlockNewsletter subscribers data.').' '.$this->l('Only subscribers without an account on the shop will be exported.').'<br /><br />';
 		$this->_html .= '<br />
 		<center><input type="submit" class="button" name="submitExport" value="'.$this->l('Export .CSV file').'" /></center>
 		</form></fieldset><br />
 		<fieldset class="width3"><legend>'.$this->l('Export customers').'</legend>
-		<form action="'.$request_uri.'" method="post">
+		<form action="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'" method="post">
 			<input type="hidden" name="action" value="customers">
-			'.$this->l('Generate a .CSV file from customer account data').'.<br /><br />';
+			'.$this->l('Generate a .CSV file from customer account data.').'<br /><br />';
 		foreach ($this->_fieldsExport as $key => $field)
 		{
 			$this->_html .= '
@@ -219,14 +209,14 @@ class Newsletter extends Module
 			{
 				case 'select':
 					$this->_html .= '<select name="'.$key.'">';
-					foreach ($field['value'] as $k => $value)
+					foreach ($field['value'] AS $k => $value)
 						$this->_html .= '<option value="'.$k.'"'.(($k == Tools::getValue($key, $field['value_default'])) ? ' selected="selected"' : '').'>'.$value.'</option>';
 					$this->_html .= '</select>';
 					break;
 				default:
 					break;
 			}
-			if (isset($field['desc']) && !empty($field['desc']))
+			if (isset($field['desc']) AND !empty($field['desc']))
 				$this->_html .= '<p>'.$field['desc'].'</p>';
 			$this->_html .= '
 			</div>';

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,31 +32,20 @@ class LoyaltyStateModule extends ObjectModel
 	public $name;
 	public $id_order_state;
 
-	protected $fieldsValidate = array('id_order_state' => 'isInt');
-	protected $fieldsRequiredLang = array('name');
-	protected $fieldsSizeLang = array('name' => 128);
-	protected $fieldsValidateLang = array('name' => 'isGenericName');
-
-	protected $table = 'loyalty_state';
-	protected $identifier = 'id_loyalty_state';
-
-	public function getFields()
-	{
-		parent::validateFields();
-		$fields['id_order_state'] = (int)($this->id_order_state);
-		return $fields;
-	}
-
 	/**
-	* Check then return multilingual fields for database interaction
-	*
-	* @return array Multilingual fields
-	*/
-	public function getTranslationsFieldsChild()
-	{
-		parent::validateFieldsLang();
-		return parent::getTranslationsFields(array('name'));
-	}
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'loyalty_state',
+		'primary' => 'id_loyalty_state',
+		'multilang' => true,
+		'fields' => array(
+			'id_order_state' =>	array('type' => self::TYPE_INT, 'validate' => 'isInt'),
+
+			// Lang fields
+			'name' =>			array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 128),
+		),
+	);
 
 	public static function getDefaultId() { return 1; }
 	public static function getValidationId() { return 2; }

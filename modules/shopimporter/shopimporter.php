@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 15821 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -34,18 +33,17 @@ class shopimporter extends ImportModule
 
 	public function __construct()
 	{
-		global $cookie;
-
 		$this->name = 'shopimporter';
 		$this->tab = 'migration_tools';
 		$this->version = '1.0';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
+		$this->is_configurable = 1;
 
 		parent::__construct ();
 
 		$this->displayName = $this->l('Shop Importer');
-		$this->description = $this->l('This module allows you to import your shop into PrestaShop from another system.');
+		$this->description = $this->l('This module allows you to import your shop from another system into Prestashop.');
 		$this->supportedImports = array(
 									'language' => array('methodName' => 'getLangagues',
 														'name' => $this->l('Language'),
@@ -288,7 +286,6 @@ class shopimporter extends ImportModule
 
 	public function getContent()
 	{
-		global $cookie;
 		$exportModules = parent::getImportModulesOnDisk();
 		//get installed module only
 		foreach($exportModules as $key => $module)
@@ -302,7 +299,7 @@ class shopimporter extends ImportModule
 		$i = 0;
 		foreach($this->supportedImports as $import)
 		{
-			if (!array_key_exists('hidden', $import))
+			if(!array_key_exists('hidden', $import))
 			$html .= 'conf['.$i.'] = new Array(\''.addslashes($import['methodName']).'\', \''.addslashes($import['label']).'\', \''.addslashes($import['className']).'\', \''.addslashes($import['name']).'\');';
 			$i++;
 		}
@@ -316,7 +313,7 @@ class shopimporter extends ImportModule
 					var importHasErrors = "'.$this->l('Errors occurred during import. For more details click on "Show errors".').'"
 					var importFinish = "'.$this->l('Import is complete.').'"
 					var truncateTable = "'.$this->l('Remove data').'"
-					var oneThing = "'.$this->l('Please choose something to import').'"
+					var oneThing = "'.$this->l('Please choose one thing to import').'"
 				</script>
 				<style>
 					.margin-form{padding: 0px 0px 1em 120px;width:300px;}
@@ -326,7 +323,7 @@ class shopimporter extends ImportModule
 				<fieldset><legend><img src="'.$this->_path.'logo.gif" alt="" />'.$this->l('Import from another system').'</legend>
 				<div class="warn" ><img src="../img/admin/warn2.png">
 					'.$this->l('Before starting the import please backup your database. ').'
-						<a href="index.php?tab=AdminBackup&token='.Tools::getAdminToken('AdminBackup'.intval(Tab::getIdFromClassName('AdminBackup')).intval($cookie->id_employee)).'"">'.$this->l(' Click here to backup').'</a>
+						<a href="index.php?tab=AdminBackup&token='.Tools::getAdminToken('AdminBackup'.(int)Tab::getIdFromClassName('AdminBackup').(int)$this->context->employee->id).'"">'.$this->l(' Click here to backup').'</a>
 				</div>
 				<br>
 				<div style="float:right;width:450px" id="steps"></div>';
@@ -349,7 +346,7 @@ class shopimporter extends ImportModule
 				$html .= '
 					<div style="display:none;" class="error" id="connectionInformation"></div>
 					<div id="config_connector"></div>
-					<div class="margin-form">
+						<div class="margin-form">
 						<input type="submit" name="displayOptions" id="displayOptions" class="button" value="'.$this->l('Next Step').'">
 					</div>
 					<hr>
@@ -358,7 +355,7 @@ class shopimporter extends ImportModule
 					<div id="importOptionsYesNo">';
 					foreach($this->supportedImports as $key => $import)
 					{
-						if (!array_key_exists('hidden', $import))
+						if(!array_key_exists('hidden', $import))
 						$html .= '<label>'.$import['name'].' : </label>
 									<div class="margin-form">
 										<label class="t" for="'.$import['identifier'].'_on'.'"><img src="../img/admin/enabled.gif" alt="Yes" title="Yes"></label>
@@ -437,7 +434,7 @@ class shopimporter extends ImportModule
 		if ((sizeof($rules['requiredLang']) || sizeof($rules['sizeLang']) || sizeof($rules['validateLang']) || Tools::isSubmit('syncLang') ||  Tools::isSubmit('syncCurrency')))
 		{
 			$moduleName = Tools::getValue('moduleName');
-			if (file_exists('../../modules/'.$moduleName.'/'.$moduleName.'.php'))
+			if (Validate::isModuleName($moduleName) && Validate::file_exists('../../modules/'.$moduleName.'/'.$moduleName.'.php'))
 			{
 				require_once('../../modules/'.$moduleName.'/'.$moduleName.'.php');
 				$importModule = new $moduleName();
@@ -461,7 +458,7 @@ class shopimporter extends ImportModule
 				{
 					$defaultIdCurrency = $importModule->getDefaultIdCurrency();
 					$currencies = $importModule->getCurrencies(0);
-					if (!empty($currencies[$defaultIdCurrency]['iso_code']))
+					if(!empty($currencies[$defaultIdCurrency]['iso_code']))
 						$defaultCurrencyImport = new Currency((int)Currency::getIdByIsoCode($currencies[$defaultIdCurrency]['iso_code']));
 					else
 						$defaultCurrencyImport = new Currency((int)Currency::getIdByIsoCodeNum($currencies[$defaultIdCurrency]['iso_code_num']));
@@ -560,7 +557,7 @@ class shopimporter extends ImportModule
 		if ((sizeof($rules['requiredLang']) || sizeof($rules['sizeLang']) || sizeof($rules['validateLang']) || Tools::isSubmit('syncLangWS') ||  Tools::isSubmit('syncCurrency')))
 		{
 			$moduleName = Tools::getValue('moduleName');
-			if (file_exists('../../modules/'.$moduleName.'/'.$moduleName.'.php'))
+			if (Validate::isModuleName($moduleName) && file_exists('../../modules/'.$moduleName.'/'.$moduleName.'.php'))
 			{
 
 				require_once('../../modules/'.$moduleName.'/'.$moduleName.'.php');
@@ -676,7 +673,7 @@ class shopimporter extends ImportModule
 			$id = $item[$this->supportedImports[strtolower($className)]['identifier']];
 			if (array_key_exists('foreign_key', $this->supportedImports[strtolower($className)]))
 				$this->replaceForeignKey($item, $table);
-			
+
 			foreach($item as $key => $val)
 			{
 				if ($key == 'passwd')
@@ -688,13 +685,13 @@ class shopimporter extends ImportModule
 				{
 					$tmp = array();
 					foreach($matchIdLang as $k => $v)
-					{
+						{
 						if (array_key_exists($k, $val))
 						{
 							$tmp[$v] = $val[$k];
 						}
-					}
-					
+				}
+
 					$object->$key = $tmp;
 				}
 				else
@@ -706,7 +703,7 @@ class shopimporter extends ImportModule
 			{
 				$this->saveMatchId(strtolower($className), (int)$object->id, (int)$id);
 				if ($className == 'Customer')
-					Db::getInstance()->Execute('UPDATE '._DB_PREFIX_.'customer SET `passwd_'.bqSQL(Tools::getValue('moduleName')).'` = \''.pSQL($password).'\' WHERE id_customer = '.(int)$object->id);
+					Db::getInstance()->execute('UPDATE '._DB_PREFIX_.'customer SET `passwd_'.bqSQL(Tools::getValue('moduleName')).'` = \''.pSQL($password).'\' WHERE id_customer = '.(int)$object->id);
 				if (array_key_exists('hasImage', $this->supportedImports[strtolower($className)]) AND Tools::isSubmit('images_'.$className))
 					$this->copyImg($item, $className);
 			}
@@ -729,7 +726,7 @@ class shopimporter extends ImportModule
 							$item['cart_products'][$k][$key] = $foreignKey[$key][$val];
 						else
 							$item['cart_products'][$k][$key] = 0;
-				Db::getInstance()->autoExecute(_DB_PREFIX_.'cart_product', $item['cart_products'][$k],'INSERT');
+				Db::getInstance()->insert('cart_product', $item['cart_products'][$k]);
 			}
 			foreach($item['order_products'] as $k => $order_products)
 			{
@@ -753,12 +750,12 @@ class shopimporter extends ImportModule
 			foreach($item['order_products'] as $k => $order_products)
 			{
 				foreach($order_products as $key => $val)
-					if (array_key_exists($key, $foreignKey) )
+					if (array_key_exists($key, $foreignKey))
 						if (array_key_exists($val, $foreignKey[$key]))
 							$item['order_products'][$k][$key] = $foreignKey[$key][$val];
 						else
 							$item['order_products'][$k][$key] = 0;
-				Db::getInstance()->autoExecute(_DB_PREFIX_.'order_detail', $item['order_products'][$k],'INSERT');
+				Db::getInstance()->insert('order_detail', $item['order_products'][$k]);
 			}
 			//save order history
 			foreach($item['order_history'] as $k => $order_history)
@@ -770,7 +767,7 @@ class shopimporter extends ImportModule
 						else
 							$item['order_history'][$k][$key] = 0;
 
-				Db::getInstance()->autoExecute(_DB_PREFIX_.'order_history', $item['order_history'][$k],'INSERT');
+				Db::getInstance()->insert('order_history', $item['order_history'][$k]);
 			}
 		}
 	}
@@ -803,7 +800,7 @@ class shopimporter extends ImportModule
 								$associatFields .= (int)$match[$association['fields'][1]][$v].'), ';
 							}
 				if ($associatFields != '')
-					Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.bqSQL($tableAssociation).'` (`'.$associatFieldsName.'`) VALUES '.rtrim($associatFields, ', '));
+					Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_.bqSQL($tableAssociation).'` (`'.$associatFieldsName.'`) VALUES '.rtrim($associatFields, ', '));
 			}
 		}
 	}
@@ -813,7 +810,7 @@ class shopimporter extends ImportModule
 		$table = $this->supportedImports[$className]['table'];
 		$moduleName = Tools::getValue('moduleName');
 		$identifier = $this->supportedImports[$className]['identifier'];
-		Db::getInstance()->Execute('UPDATE `'._DB_PREFIX_.bqSQL($table).'` SET `'.bqSQL($identifier).'_'.bqSQL($moduleName).'` =  '.(int)$matchId.' WHERE `'.bqSQL($identifier).'` = '.(int)$psId);
+		Db::getInstance()->execute('UPDATE `'._DB_PREFIX_.bqSQL($table).'` SET `'.bqSQL($identifier).'_'.bqSQL($moduleName).'` =  '.(int)$matchId.' WHERE `'.bqSQL($identifier).'` = '.(int)$psId);
 	}
 
 	private function getMatchId($className)
@@ -821,7 +818,7 @@ class shopimporter extends ImportModule
 		$table = $this->supportedImports[$className]['table'];
 		$moduleName = Tools::getValue('moduleName');
 		$identifier = $this->supportedImports[$className]['identifier'];
-		$returns = Db::getInstance()->ExecuteS('SELECT `'.bqSQL($identifier).'_'.bqSQL($moduleName).'`, `'.bqSQL($identifier).'` FROM `'._DB_PREFIX_.bqSQL($table).'` WHERE `'.bqSQL($identifier).'_'.bqSQL($moduleName).'` != 0 ');
+		$returns = Db::getInstance()->executeS('SELECT `'.bqSQL($identifier).'_'.bqSQL($moduleName).'`, `'.bqSQL($identifier).'` FROM `'._DB_PREFIX_.bqSQL($table).'` WHERE `'.bqSQL($identifier).'_'.bqSQL($moduleName).'` != 0 ');
 		$match = array();
 		foreach($returns as $return)
 			$match[$return[$identifier.'_'.$moduleName]] = $return[$identifier];
@@ -865,41 +862,41 @@ class shopimporter extends ImportModule
 		$cover = 1;
 		if (array_key_exists($item[$identifier], $matchId))
 			if(array_key_exists('images', $item) && !is_null($item['images']))
-				foreach($item['images'] as $key => $image)
-				{
-					$tmpfile = tempnam(_PS_TMP_IMG_DIR_, 'import');
+			foreach($item['images'] as $key => $image)
+			{
+				$tmpfile = tempnam(_PS_TMP_IMG_DIR_, 'import');
 					if (@copy(str_replace(' ', '%20', $image), $tmpfile))
-					{
+				{
 
-						$imagesTypes = ImageType::getImagesTypes($type);
-						imageResize($tmpfile, $path.(int)$matchId[$item[$identifier]].'.jpg');
-						if ($className == 'Product')
-						{
-							$image = new Image();
-							$image->id_product = (int)($matchId[$item[$identifier]]);
-							$image->cover = $cover;
-							$image->position = Image::getHighestPosition((int)$matchId[$item[$identifier]]) + 1;
-							$legend = array();
-							foreach($item['name'] as $key => $val)
-								if (array_key_exists($key, $matchIdLang))
-									$legend[$matchIdLang[$key]] = Tools::link_rewrite($val);
-								else
-									$legend[Configuration::get('PS_LANG_DEFAULT')] = Tools::link_rewrite($val);
-							$image->legend = $legend;
-							$image->add();
-							imageResize($tmpfile, $path.(int)$matchId[$item[$identifier]].'-'.(int)$image->id.'.jpg');
-							foreach ($imagesTypes AS $k => $imageType)
-								imageResize($tmpfile, $path.(int)$matchId[$item[$identifier]].'-'.(int)$image->id.'-'.stripslashes($imageType['name']).'.jpg', $imageType['width'], $imageType['height']);
-						}
-						else
-							foreach ($imagesTypes AS $k => $imageType)
-								imageResize($tmpfile, $path.(int)$matchId[$item[$identifier]].'-'.stripslashes($imageType['name']).'.jpg', $imageType['width'], $imageType['height']);
+					$imagesTypes = ImageType::getImagesTypes($type);
+					ImageManager::resize($tmpfile, $path.(int)$matchId[$item[$identifier]].'.jpg');
+					if ($className == 'Product')
+					{
+						$image = new Image();
+						$image->id_product = (int)($matchId[$item[$identifier]]);
+						$image->cover = $cover;
+						$image->position = Image::getHighestPosition((int)$matchId[$item[$identifier]]) + 1;
+						$legend = array();
+						foreach($item['name'] as $key => $val)
+							if (array_key_exists($key, $matchIdLang))
+								$legend[$matchIdLang[$key]] = Tools::link_rewrite($val);
+							else
+								$legend[Configuration::get('PS_LANG_DEFAULT')] = Tools::link_rewrite($val);
+						$image->legend = $legend;
+						$image->add();
+						ImageManager::resize($tmpfile, $path.(int)$matchId[$item[$identifier]].'-'.(int)$image->id.'.jpg');
+						foreach ($imagesTypes AS $k => $imageType)
+							ImageManager::resize($tmpfile, $path.(int)$matchId[$item[$identifier]].'-'.(int)$image->id.'-'.stripslashes($imageType['name']).'.jpg', $imageType['width'], $imageType['height']);
 					}
 					else
-						@unlink($tmpfile);
-					@unlink($tmpfile);
-					$cover = 0;
+						foreach ($imagesTypes as $imageType)
+							ImageManager::resize($tmpfile, $path.(int)$matchId[$item[$identifier]].'-'.stripslashes($imageType['name']).'.jpg', $imageType['width'], $imageType['height']);
 				}
+				else
+					@unlink($tmpfile);
+				@unlink($tmpfile);
+				$cover = 0;
+			}
 
 	}
 
@@ -916,7 +913,7 @@ class shopimporter extends ImportModule
 		{
 			if ($table == 'product' AND $key == 'id_category')
 				$key2 = 'id_category_default';
-			elseif ($table == 'customer' AND $key == 'id_group')
+			else if ($table == 'customer' AND $key == 'id_group')
 				$key2 = 'id_default_group';
 			else
 				$key2 = $key;
@@ -939,22 +936,22 @@ class shopimporter extends ImportModule
 		foreach ($this->supportedImports[$className]['alterTable'] AS $name => $type)
 		{
 			$moduleName = Tools::getValue('moduleName');
-			Db::getInstance()->ExecuteS("SHOW COLUMNS FROM `"._DB_PREFIX_.bqSQL($from)."` LIKE '".pSQL($name).'_'.pSQL($moduleName)."'");
+			Db::getInstance()->executeS("SHOW COLUMNS FROM `"._DB_PREFIX_.bqSQL($from)."` LIKE '".pSQL($name).'_'.pSQL($moduleName)."'");
 			if (!Db::getInstance()->numRows() AND !array_key_exists($name.'_'.$moduleName, $result))
-				$queryTmp .= ' ADD `'.$name.'_'.$moduleName.'` '.$type.' NOT NULL,';
+					$queryTmp .= ' ADD `'.$name.'_'.$moduleName.'` '.$type.' NOT NULL,';
 		}
 		if (!empty($queryTmp))
 		{
 			$query = 'ALTER TABLE  `'._DB_PREFIX_.bqSQL($from).'` ';
 			$query .= rtrim($queryTmp, ',');
-			Db::getInstance()->Execute($query);
+			Db::getInstance()->execute($query);
 		}
 	}
 
 	private function updateCat()
 	{
 		$moduleName = Tools::getValue('moduleName');
-		Db::getInstance()->Execute('UPDATE
+		Db::getInstance()->execute('UPDATE
 									'._DB_PREFIX_.'category c
 									INNER JOIN
 									'._DB_PREFIX_.'category c2
@@ -990,7 +987,7 @@ class shopimporter extends ImportModule
 			foreach($this->supportedImports AS $table => $conf)
 				if ($conf['identifier'] == $key2)
 					$from = $this->supportedImports[$table]['table'];
-			$return = Db::getInstance()->ExecuteS('SELECT `'.bqSQL($key2).'_'.bqSQL($moduleName).'`, `'.bqSQL($key2).'` FROM `'._DB_PREFIX_.bqSQL($from).'` WHERE `'.bqSQL($key2).'_'.bqSQL($moduleName).'` != 0');
+			$return = Db::getInstance()->executeS('SELECT `'.bqSQL($key2).'_'.bqSQL($moduleName).'`, `'.bqSQL($key2).'` FROM `'._DB_PREFIX_.bqSQL($from).'` WHERE `'.bqSQL($key2).'_'.bqSQL($moduleName).'` != 0');
 			if (!empty($return))
 				foreach($return AS $name => $val)
 					$match[$key][$val[$key2.'_'.$moduleName]] = $val[$key2];
@@ -1002,7 +999,7 @@ class shopimporter extends ImportModule
 	{
 		$id = $this->supportedImports[$table]['identifier'];
 		$moduleName = Tools::getValue('moduleName');
-		$return = Db::getInstance()->ExecuteS('SELECT `'.bqSQL($id).'_'.bqSQL($moduleName).'`, `'.bqSQL($id).'` FROM `'._DB_PREFIX_.bqSQL($table).'` WHERE `'.bqSQL($id).'_'.bqSQL($moduleName).'` != 0');
+		$return = Db::getInstance()->executeS('SELECT `'.bqSQL($id).'_'.bqSQL($moduleName).'`, `'.bqSQL($id).'` FROM `'._DB_PREFIX_.bqSQL($table).'` WHERE `'.bqSQL($id).'_'.bqSQL($moduleName).'` != 0');
 		$match = array();
 		foreach($return AS $name => $val)
 				$match[$val[$id.'_'.$moduleName]] = $val[$id];
@@ -1012,7 +1009,7 @@ class shopimporter extends ImportModule
 	private function getMatchIdLang($order = 1)
 	{
 		$moduleName = Tools::getValue('moduleName');
-		$return = Db::getInstance()->ExecuteS('SELECT `id_lang`, `id_lang_'.bqSQL($moduleName).'` FROM `'._DB_PREFIX_.'lang'.'` WHERE `id_lang_'.bqSQL($moduleName).'` != 0');
+		$return = Db::getInstance()->executeS('SELECT `id_lang`, `id_lang_'.bqSQL($moduleName).'` FROM `'._DB_PREFIX_.'lang'.'` WHERE `id_lang_'.bqSQL($moduleName).'` != 0');
 		$match = array();
 		foreach($return AS $name => $val)
 			if ((bool)$order)
@@ -1039,7 +1036,10 @@ class shopimporter extends ImportModule
 					$fields[$field] = $this->generateData($size, $rules['validate'][$field]);
 				}
 				else
-					$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $field, $className).'</b> '.$this->l('is required');
+					$returnErrors[] = sprintf(
+						$this->l('The field %s is required.'),
+						call_user_func(array($className, 'displayFieldName'), $field, $className)
+					);
 
 		/* Checking for maximum fields sizes */
 		foreach ($rules['size'] AS $field => $maxLength)
@@ -1048,7 +1048,11 @@ class shopimporter extends ImportModule
 					if ($hasErrors == 2)
 						$fields[$field] = substr($fields[$field], 0, $maxLength);
 					else
-						$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $field, $className).'</b>'.$this->l('is too long').' ('.$maxLength.' '.$this->l('chars max').')';
+						$returnErrors[] = sprintf(
+							$this->l('The field %1$s is too long (%2$d chars max).'),
+							call_user_func(array($className, 'displayFieldName'), $field, $className),
+							$maxLength
+						);
 
 		/* Checking for fields validity */
 		foreach ($rules['validate'] AS $field => $function)
@@ -1064,55 +1068,70 @@ class shopimporter extends ImportModule
 							$fields[$field] = $this->generateData($size, $rules['validate'][$field]);
 						}
 						else
-							$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $field, $className).'</b> '.$this->l('is invalid');
+							$returnErrors[] = sprintf(
+								$this->l('The field %s is invalid.'),
+								call_user_func(array($className, 'displayFieldName'), $field, $className)
+							);
 
 		if ((sizeof($rules['requiredLang']) || sizeof($rules['sizeLang']) || sizeof($rules['validateLang'])))
 		{
-			$matchIdLang = $this->getMatchIdLang(0);
-			/* Checking for multilingual required fields */
-			foreach ($rules['requiredLang'] AS $fieldLang)
-			{
-				if (($empty = $fields[$fieldLang][$matchIdLang[$defaultLanguage->id]]) === false || empty($empty))
-					if ($hasErrors == 2)
-					{
-						if (array_key_exists($fieldLang, $rules['sizeLang']))
-							$size = $rules['sizeLang'][$fieldLang];
-						else
-							$size = 1;
-						$fields[$fieldLang][$matchIdLang[$defaultLanguage->id]] = $this->generateData($size, $rules['validateLang'][$fieldLang]);
-					}
-					else
-						$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $fieldLang, $className).'</b> '.$this->l('is required at least in').' '.$defaultLanguage->name;
-			}
-			/* Checking for maximum multilingual fields size */
-			foreach ($rules['sizeLang'] AS $fieldLang => $maxLength)
-				foreach ($languages AS $language)
-					if (isset($fields[$fieldLang][$language['id_lang']]) && $fields[$fieldLang] !== false AND Tools::strlen($fields[$fieldLang][$language['id_lang']]) > $maxLength)
-						if ($hasErrors == 2)
-							$fields[$fieldLang] = substr($fields[$fieldLang], 0, $maxLength);
-						else
-							$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $fieldLang, $className).' ('.$language['name'].')</b> '.$this->l('is too long').' ('.$maxLength.' '.$this->l('chars max').')';
-			/* Checking for multilingual fields validity */
-			foreach ($rules['validateLang'] AS $fieldLang => $function)
-			{
-				foreach ($languages AS $language)
+		$matchIdLang = $this->getMatchIdLang(0);
+		/* Checking for multilingual required fields */
+		foreach ($rules['requiredLang'] AS $fieldLang)
+		{
+			if (($empty = $fields[$fieldLang][$matchIdLang[$defaultLanguage->id]]) === false || empty($empty))
+				if ($hasErrors == 2)
 				{
+					if (array_key_exists($fieldLang, $rules['sizeLang']))
+						$size = $rules['sizeLang'][$fieldLang];
+					else
+						$size = 1;
+					$fields[$fieldLang][$matchIdLang[$defaultLanguage->id]] = $this->generateData($size, $rules['validateLang'][$fieldLang]);
+				}
+				else
+					$returnErrors[] = sprintf(
+						$this->l('This field %1$s is required at least in %2$s'),
+						call_user_func(array($className, 'displayFieldName'), $fieldLang, $className),
+						$defaultLanguage->name
+					);
+		}
+		/* Checking for maximum multilingual fields size */
+		foreach ($rules['sizeLang'] AS $fieldLang => $maxLength)
+			foreach ($languages AS $language)
+				if (isset($fields[$fieldLang][$language['id_lang']]) && $fields[$fieldLang] !== false AND Tools::strlen($fields[$fieldLang][$language['id_lang']]) > $maxLength)
+					if ($hasErrors == 2)
+						$fields[$fieldLang] = substr($fields[$fieldLang], 0, $maxLength);
+					else
+						$returnErrors[] = sprintf(
+							$this->l('This field %1$s (%2$s) is too long: %3$d chars max.'),
+							call_user_func(array($className, 'displayFieldName'), $fieldLang, $className),
+							$language['name'],
+							$maxLength
+						);
+		foreach ($rules['validateLang'] AS $fieldLang => $function)
+			{
+			foreach ($languages AS $language)
+			{
 					if (array_key_exists($fieldLang, $fields) AND array_key_exists($language['id_lang'], $fields[$fieldLang]) AND ($value = $fields[$fieldLang][$language['id_lang']]) !== false AND !empty($value))
-					{
-						if (!Validate::$function($value))
-							if ($hasErrors == 2)
-							{
-								if (array_key_exists($fieldLang, $rules['sizeLang']))
-									$size = $rules['sizeLang'][$fieldLang];
-								else
-									$size = 1;
-								$fields[$fieldLang][$language['id_lang']] = $this->generateData($size, $rules['validateLang'][$fieldLang]);
-							}
+				{
+					if (!Validate::$function($value))
+						if ($hasErrors == 2)
+						{
+							if (array_key_exists($fieldLang, $rules['sizeLang']))
+								$size = $rules['sizeLang'][$fieldLang];
 							else
-								$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $fieldLang, $className).' ('.$language['name'].')</b> '.$this->l('is invalid');
-					}
+								$size = 1;
+							$fields[$fieldLang][$language['id_lang']] = $this->generateData($size, $rules['validateLang'][$fieldLang]);
+						}
+						else
+							$returnErrors[] = sprintf(
+								$this->l('The field %1$s (%2$s) is invalid.'),
+								call_user_func(array($className, 'displayFieldName'), $fieldLang, $className),
+								$language['name']
+							);
 				}
 			}
+		}
 		}
 		return $returnErrors;
 	}
@@ -1133,7 +1152,10 @@ class shopimporter extends ImportModule
 					$fields[$field] = $this->generateData($size, $rules['validate'][$field]);
 				}
 				else
-					$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $field, $className).'</b> '.$this->l('is required');
+					$returnErrors[] = sprintf(
+						$this->l('The field %s is required.'),
+						call_user_func(array($className, 'displayFieldName'), $field, $className)
+					);
 
 		/* Checking for maximum fields sizes */
 		foreach ($rules['size'] AS $field => $maxLength)
@@ -1142,7 +1164,11 @@ class shopimporter extends ImportModule
 					if ($hasErrors == 2)
 						$fields[$field] = substr($fields[$field], 0, $maxLength);
 					else
-						$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $field, $className).'</b>'.$this->l('is too long').' ('.$maxLength.' '.$this->l('chars max').')';
+						$returnErrors[] = sprintf(
+							$this->l('The field %1$s is too long (%2$d chars max).'),
+							call_user_func(array($className, 'displayFieldName'), $field, $className),
+							$maxLength
+						);
 
 		/* Checking for fields validity */
 		foreach ($rules['validate'] AS $field => $function)
@@ -1157,9 +1183,11 @@ class shopimporter extends ImportModule
 								$size = 1;
 							$fields[$field] = $this->generateData($size, $rules['validate'][$field]);
 						}
-					else
-						$returnErrors[] = $this->l('the field').' <b>'.call_user_func(array($className, 'displayFieldName'), $field, $className).'</b> '.$this->l('is invalid');
-
+						else
+							$returnErrors[] = sprintf(
+								$this->l('The field %s is invalid.'),
+								call_user_func(array($className, 'displayFieldName'), $field, $className)
+							);
 
 		return $returnErrors;
 	}
@@ -1189,34 +1217,34 @@ class shopimporter extends ImportModule
 									if ($gz->extract(_PS_TRANSLATIONS_DIR_.'../', false))
 									{
 										if (!Language::checkAndAddLanguage($iso))
-											$errors[] = Tools::displayError('Archive cannot be extracted.');
+											$errors[] = $this->l('Archive cannot be extracted.');
 										else
 										{
 											$newId = Language::getIdByIso($iso);
-											Db::getInstance()->Execute('UPDATE  `'._DB_PREFIX_.'lang`
+											Db::getInstance()->execute('UPDATE  `'._DB_PREFIX_.'lang`
 																		SET  `id_lang_'.bqSQL($moduleName).'` =  '.(int)$language['id_lang'].'
 																		WHERE  `id_lang` = '.(int)$newId);
 										}
 									}
-									$errors[] = Tools::displayError('Archive cannot be extracted.');
+									$errors[] = $this->l('Archive cannot be extracted.');
 								}
 								else
-									$errors[] = Tools::displayError('Server does not have permissions for writing.');
+									$errors[] = $this->l('Server does not have permissions for writing.');
 							}
 							else
-								$errors[] = Tools::displayError('Language not found');
+								$errors[] = $this->l('Language not found');
 						}
 						else
-							$errors[] = Tools::displayError('archive cannot be downloaded from prestashop.com.');
+							$errors[] = $this->l('archive cannot be downloaded from prestashop.com.');
 					}
 					else
-						$errors[] = Tools::displayError('archive cannot be downloaded from prestashop.com.');
+						$errors[] = $this->l('archive cannot be downloaded from prestashop.com.');
 				}
 			}
 			else
 			{
 				$newId = Language::getIdByIso($iso);
-				Db::getInstance()->Execute('UPDATE  `'._DB_PREFIX_.'lang`
+				Db::getInstance()->execute('UPDATE  `'._DB_PREFIX_.'lang`
 											SET  `id_lang_'.bqSQL($moduleName).'` =  '.(int)$language['id_lang'].'
 											WHERE  `id_lang` = '.(int)$newId);
 			}
@@ -1228,87 +1256,90 @@ class shopimporter extends ImportModule
 		switch ($table)
 		{
 			case 'customer' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'customer');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'customer_group');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'customer');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'customer_group');
 				break;
 			case 'address' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'address');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'address');
 				break;
 			case 'country' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'state');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'country');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'country_lang');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'country');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'state');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'country');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'country_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'country');
 			case 'group' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'customer_group');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'group_lang');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'group');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'customer_group');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'group_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'group');
 				break;
 			case 'combination' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute_combination');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute_shop');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute_combination');
 				break;
 			case 'category' :
-				Db::getInstance()->Execute('DELETE FROM `'._DB_PREFIX_.'category` WHERE id_category != 1');
-				Db::getInstance()->Execute('DELETE FROM `'._DB_PREFIX_.'category_lang` WHERE id_category != 1');
-				Db::getInstance()->Execute('ALTER TABLE `'._DB_PREFIX_.'category` AUTO_INCREMENT = 2 ');
+				Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'category` WHERE id_category != 1');
+				Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'category_lang` WHERE id_category != 1');
+				Db::getInstance()->execute('ALTER TABLE `'._DB_PREFIX_.'category` AUTO_INCREMENT = 2 ');
 				foreach (scandir(_PS_CAT_IMG_DIR_) AS $d)
 						if (preg_match('/^[0-9]+(\-(.*))?\.jpg$/', $d))
 							unlink(_PS_CAT_IMG_DIR_.$d);
 				Image::clearTmpDir();
 			break;
 			case 'product' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'product');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'feature_product');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_lang');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'category_product');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_tag');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'image');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'image_lang');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute_combination');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'specific_price');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'specific_price_priority');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_shop');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'feature_product');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'category_product');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_tag');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'image');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'image_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute_shop');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'product_attribute_combination');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'specific_price');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'specific_price_priority');
 
 				Image::deleteAllImages(_PS_PROD_IMG_DIR_);
 				Image::clearTmpDir();
 				@mkdir(_PS_PROD_IMG_DIR_);
 				break;
 			case 'manufacturer' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'manufacturer');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'manufacturer_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'manufacturer');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'manufacturer_lang');
 				foreach (scandir(_PS_MANU_IMG_DIR_) AS $d)
 					if (preg_match('/^[0-9]+(\-(.*))?\.jpg$/', $d))
 						unlink(_PS_MANU_IMG_DIR_.$d);
 				Image::clearTmpDir();
 				break;
 			case 'Suppliers' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'supplier');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'supplier_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'supplier');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'supplier_lang');
 				foreach (scandir(_PS_SUPP_IMG_DIR_) AS $d)
 					if (preg_match('/^[0-9]+(\-(.*))?\.jpg$/', $d))
 						unlink(_PS_SUPP_IMG_DIR_.$d);
 				Image::clearTmpDir();
 				break;
 			case 'attribute' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute_lang');
 				break;
 			case 'attributegroup' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute_group');
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute_group_lang');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute_group');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.'attribute_group_lang');
 				break;
 			case 'currency' :
 			case 'customer' :
 			case 'zone' :
 			case 'state' :
-				Db::getInstance()->Execute('TRUNCATE TABLE `'._DB_PREFIX_.bqSQL($table).'`');
+				Db::getInstance()->execute('TRUNCATE TABLE `'._DB_PREFIX_.bqSQL($table).'`');
 				break;
 		}
 		return true;
 	}
 
-	public function cleanPositions($table)
+	public function cleanPositions($table, $shopList = null)
 	{
 		if ($table == 'category')
 		{
@@ -1443,13 +1474,15 @@ class shopimporter extends ImportModule
 			if (isset($this->name))
 				$order->module = $this->name;
 
+			$carrier = new Carrier((int)$item['id_carrier']);
+
 			$currency = new Currency($order->id_currency);
 			$order->conversion_rate = !empty($currency->conversion_rate) ? $currency->conversion_rate : 1;
 			$order->total_products = (float)$item['total_products'];
 			$order->total_products_wt = (float)$item['total_products_wt'];
 			$order->total_discounts = (float)$item['total_discounts'];
 			$order->total_shipping = (float)$item['total_shipping'];
-			$order->carrier_tax_rate = (float)Tax::getCarrierTaxRate((int)$item['id_carrier'], (int)$item[Configuration::get('PS_TAX_ADDRESS_TYPE')]);
+			$order->carrier_tax_rate = (float)$carrier->getTaxesRate(new Address((int)$item[Configuration::get('PS_TAX_ADDRESS_TYPE')]));
 			$order->total_wrapping = (float)$item['total_wrapping'];
 			$order->total_paid = (float)$item['total_paid'];
 			$order->total_paid_real = (float)$item['total_paid_real'];
@@ -1470,5 +1503,3 @@ class shopimporter extends ImportModule
 		}
 	}
 }
-
-?>

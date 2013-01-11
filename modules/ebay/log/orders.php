@@ -1,6 +1,6 @@
 <?php
 
-$dateLastImport = '28/12/2012 11:39:18';
+$dateLastImport = '10/01/2013 19:11:59';
 
 $orderList = array (
   0 => 

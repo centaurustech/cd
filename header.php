@@ -20,16 +20,20 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14352 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
-// Save the value of $useSSL ($useSSL will be overwritten by FrontController::__contruct())
-$controller = new FrontController();
+/**
+ * This file will be removed in 1.6
+ */
 
-if (Tools::usingSecureMode())
-	$useSSL = $controller->ssl = true;
-	
+if (isset(Context::getContext()->controller))
+	$controller = Context::getContext()->controller;
+else
+{
+	$controller = new FrontController();
+	$controller->init();
+}
+Tools::displayFileAsDeprecated();
 $controller->displayHeader();
-

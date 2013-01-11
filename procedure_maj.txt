@@ -1,0 +1,29 @@
+
+
+PROCÉDURE DE MISE À JOUR PS vers la version '1.5.3.1'
+
+Copie du site original.
+
+1/ dump base de prod
+2/ creation d'une nouvelle base
+3/ restore des données dans la nouvelle base
+4/ sudo chgrp -R www-data www; sudo chmod -R g+w  www
+
+Verification qu'il fonctionne en local
+Backup des settings 
+
+Se rendre sur /install/upgrade/upgrade.php (migrations db)
+Passer le script inter.rb qui liste les fichiers à supprimer 
+Ces fichiers sont maintenant inutils pour la version en court.
+
+Nettoyer le cache 
+ rm -rf cache/*
+
+Désactiver le cache via l'admin ps
+
+Correction du template cd pour l'adapter à la nouvelle version
+
+
+
+
+

@@ -5,38 +5,19 @@
 	<title>[{shop_name}] Neue Bestellung</title>
 </head>
 <body>
-<table style="font-family: Verdana,sans-serif; font-size: 11px; color: #374953; width: 550px;">
+	<p style="line-height: 17px;"><a title="{shop_name}" href="{shop_url}"><img style="border: none;" src="{shop_logo}" alt="{shop_name}" /></a><br /><br /> Sie haben eine neue Bestellung erhalten von:<br /><strong style="color: #db3484;">{firstname} {lastname} ({email})</strong></p>
+<table border="0">
 <tbody>
 <tr>
-<td align="left"><a title="{shop_name}" href="{shop_url}"><img style="border: none;" src="{shop_logo}" alt="{shop_name}" /></a></td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td align="left">Sie haben eine neue Bestellung erhalten von <strong style="color: #db3484;">{firstname} {lastname}</strong>.</td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td style="background-color: #db3484; color: #fff; font-size: 12px; font-weight: bold; padding: 0.5em 1em;" align="left">Einzelheiten zur Bestellung</td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td align="left">Bestellung: <strong><span style="color: #db3484;">{order_name}</span> ausgef&uuml;hrt am {date}</strong> <br />Zahlung: <strong>{payment}</strong></td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td align="left">{items}  
-<table style="width: 100%; font-family: Verdana,sans-serif; font-size: 11px; color: #374953;">
+<td style="width: 550px; font-family: Verdana, sans-serif; font-size: 11px;">
+<p style="background-color: #db3484; width: 540px; color: #fff; font-size: 12px; font-weight: bold; padding: 5px;">Einzelheiten zur Bestellung</p>
+<p>Bestellung: <strong><span style="color: #db3484;">#{order_name}</span> ausgef&uuml;hrt am {date}</strong></p>
+<p>Zahlung: <strong>{payment}</strong></p>
+<table style="width: 100%; font-size: 11px; color: #374953;">
 <tbody>
-<tr style="background-color: #b9babe; text-align: center;">
-<th style="width: 15%; padding: 0.6em 0;">Referenz</th><th>Produkt</th><th style="width: 15%; padding: 0.6em 0;">St&uuml;ckpreis</th><th style="width: 15%; padding: 0.6em 0;">Menge</th><th style="width: 20%; padding: 0.6em 0;">Gesamtpreis</th>
+<tr style="background-color: #b9babe; text-align: center;"><th style="width: 15%; padding: 0.6em;">Referenz</th><th>Produkt</th><th style="width: 15%; padding: 0.6em;">St&uuml;ckpreis</th><th style="width: 15%; padding: 0.6em;">Menge</th><th style="width: 20%; padding: 0.6em;">Gesamtpreis</th></tr>
+<tr>
+	<td>{items}</td>
 </tr>
 <tr style="text-align: right;">
 <td style="background-color: #b9babe; padding: 0.6em 0.4em;" colspan="4">Produkte</td>
@@ -60,59 +41,19 @@
 </tr>
 </tbody>
 </table>
-</td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td style="background-color: #db3484; color: #fff; font-size: 12px; font-weight: bold; padding: 0.5em 1em;" align="left">Versand</td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td align="left">Lieferer: <strong>{carrier}</strong></td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td>
-<table style="width: 100%; font-family: Verdana,sans-serif; font-size: 11px; color: #374953;">
+<p>Lieferer: <strong>{carrier}</strong></p>
+<table style="width: 100%; font-size: 11px; color: #374953;">
 <tbody>
-<tr style="background-color: #b9babe; text-transform: uppercase;">
-<th style="text-align: left; padding: 0.3em 1em;">LIEFERadressE</th><th style="text-align: left; padding: 0.3em 1em;">RECHNUNGSadressE</th>
-</tr>
+<tr style="background-color: #b9babe; text-transform: uppercase;"><th style="text-align: left; padding: 0.3em 1em;">Lieferadresse</th><th style="text-align: left; padding: 0.3em 1em;">Rechnungsadresse</th></tr>
 <tr>
-<td style="padding: 0.5em 0 0.5em 0.5em; background-color: #ebecee;">
-{delivery_block_html}
-</td>
-<td style="padding: 0.5em 0 0.5em 0.5em; background-color: #ebecee;">
-{invoice_block_html}
-</td>
+<td style="padding: 0.5em 0 0.5em 0.5em; background-color: #ebecee;">{delivery_block_html}</td>
+<td style="padding: 0.5em 0 0.5em 0.5em; background-color: #ebecee;">{invoice_block_html}</td>
 </tr>
 </tbody>
 </table>
+<p style="background-color: #db3484; width: 540px; color: #fff; font-size: 12px; font-weight: bold; padding: 5px;">Kundennachricht: <strong>{message}</strong></p>
+<p style="width: 100%; text-align: center;"><a style="color: #db3484; font-weight: bold; text-decoration: none;" href="{shop_url}">{shop_name}</a> powered with <a style="text-decoration: none; color: #374953;" href="http://www.prestashop.com/">PrestaShop&trade;</a></p>
 </td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td style="background-color: #db3484; color: #fff; font-size: 12px; font-weight: bold; padding: 0.5em 1em;" align="left">Kundennachricht</td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td align="left"><strong>{message}</strong></td>
-</tr>
-<tr>
-<td>&nbsp;</td>
-</tr>
-<tr>
-<td style="font-size: 10px; border-top: 1px solid #D9DADE;" align="center"><a style="color: #db3484; font-weight: bold; text-decoration: none;" href="versions/1.4.1.0/mails/en/%7Bshop_url%7D">{shop_name}</a> powered with <a style="text-decoration: none; color: #374953;" href="http://www.prestashop.com/">PrestaShop&trade;</a></td>
 </tr>
 </tbody>
 </table>

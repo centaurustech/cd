@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -46,47 +45,55 @@ class BlockMyAccount extends Module
 
 	public function install()
 	{
-		if (!$this->addMyAccountBlockHook() OR !parent::install() OR !$this->registerHook('leftColumn') OR !$this->registerHook('header'))
+		if (!$this->addMyAccountBlockHook() 
+			|| !parent::install() 
+			|| !$this->registerHook('displayLeftColumn') 
+			|| !$this->registerHook('displayHeader'))
 			return false;
 		return true;
 	}
 
 	public function uninstall()
 	{
-		return (parent::uninstall() AND $this->removeMyAccountBlockHook());
+		return (parent::uninstall() && $this->removeMyAccountBlockHook());
 	}
 
-	public function hookLeftColumn($params)
+	public function hookDisplayLeftColumn($params)
 	{
-		global $smarty;
-		
-		if (!$params['cookie']->isLogged())
+		if (!$this->context->customer->isLogged())
 			return false;
-		$smarty->assign(array(
-			'voucherAllowed' => (int)(Configuration::get('PS_VOUCHERS')),
-			'returnAllowed' => (int)(Configuration::get('PS_ORDER_RETURN')),
-			'HOOK_BLOCK_MY_ACCOUNT' => Module::hookExec('myAccountBlock')
+
+		$this->smarty->assign(array(
+			'voucherAllowed' => CartRule::isFeatureActive(),
+			'returnAllowed' => (int)Configuration::get('PS_ORDER_RETURN'),
+			'HOOK_BLOCK_MY_ACCOUNT' => Hook::exec('displayMyAccountBlock'),
 		));
 		return $this->display(__FILE__, $this->name.'.tpl');
 	}
 
-	public function hookRightColumn($params)
+	public function hookDisplayRightColumn($params)
 	{
-		return $this->hookLeftColumn($params);
+		return $this->hookDisplayLeftColumn($params);
+	}
+	
+	public function hookDisplayFooter($params)
+	{
+		return $this->hookDisplayLeftColumn($params);
 	}
 
 	private function addMyAccountBlockHook()
 	{
-		return Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'hook` (`name`, `title`, `description`, `position`) VALUES (\'myAccountBlock\', \'My account block\', \'Display extra informations inside the "my account" block\', 1)');
+		return Db::getInstance()->execute('INSERT IGNORE INTO `'._DB_PREFIX_.'hook` (`name`, `title`, `description`, `position`) VALUES (\'displayMyAccountBlock\', \'My account block\', \'Display extra informations inside the "my account" block\', 1)');
 	}
 
 	private function removeMyAccountBlockHook()
 	{
-		return Db::getInstance()->Execute('DELETE FROM `'._DB_PREFIX_.'hook` WHERE `name` = \'myAccountBlock\'');
+		return Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'hook` WHERE `name` = \'displayMyAccountBlock\'');
 	}
-	function hookHeader($params)
+
+	public function hookDisplayHeader($params)
 	{
-		Tools::addCSS(($this->_path).'blockmyaccount.css', 'all');
+		$this->context->controller->addCSS(($this->_path).'blockmyaccount.css', 'all');
 	}
 }
 

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,11 +32,11 @@ class BlockSpecials extends Module
 	private $_html = '';
 	private $_postErrors = array();
 
-    	function __construct()
-	{
-		$this->name = 'blockspecials';
-		$this->tab = 'pricing_promotion';
-		$this->version = 0.8;
+    function __construct()
+    {
+        $this->name = 'blockspecials';
+        $this->tab = 'pricing_promotion';
+        $this->version = '0.8';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
@@ -58,7 +57,7 @@ class BlockSpecials extends Module
 		if (Tools::isSubmit('submitSpecials'))
 		{
 			Configuration::updateValue('PS_BLOCK_SPECIALS_DISPLAY', (int)(Tools::getValue('always_display')));
-			$output .= '<div class="conf confirm"><img src="../img/admin/ok.gif" alt="'.$this->l('Confirmation').'" />'.$this->l('Settings updated').'</div>';
+			$output .= '<div class="conf confirm">'.$this->l('Settings updated').'</div>';
 		}
 		return $output.$this->displayForm();
 	}
@@ -87,13 +86,13 @@ class BlockSpecials extends Module
 		if (Configuration::get('PS_CATALOG_MODE'))
 			return ;
 
-		global $smarty;
-		if (!$special = Product::getRandomSpecial((int)($params['cookie']->id_lang)) AND !Configuration::get('PS_BLOCK_SPECIALS_DISPLAY'))
+		if (!($special = Product::getRandomSpecial((int)$params['cookie']->id_lang)) && !Configuration::get('PS_BLOCK_SPECIALS_DISPLAY'))
 			return;
-		$smarty->assign(array(
+
+		$this->smarty->assign(array(
 			'special' => $special,
 			'priceWithoutReduction_tax_excl' => Tools::ps_round($special['price_without_reduction'], 2),
-			'mediumSize' => Image::getSize('medium')
+			'mediumSize' => Image::getSize(ImageType::getFormatedName('medium')),
 		));
 
 		return $this->display(__FILE__, 'blockspecials.tpl');
@@ -108,7 +107,7 @@ class BlockSpecials extends Module
 	{
 		if (Configuration::get('PS_CATALOG_MODE'))
 			return ;
-		Tools::addCSS(($this->_path).'blockspecials.css', 'all');
+		$this->context->controller->addCSS(($this->_path).'blockspecials.css', 'all');
 	}
 }
 

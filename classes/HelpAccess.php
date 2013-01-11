@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14001 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,92 +27,72 @@
 
 class HelpAccessCore
 {
-	const URL = 'http://help.prestashop.com';
+    const URL = 'http://help.prestashop.com';
 
-	protected static $_images = array(0 => 'none',
-							 1 => 'help2.png',
-							 2 => 'help-new.png');
-
-	public static function trackClick($label, $version)
-	{
-		Db::getInstance()->Execute('
-		INSERT INTO `'._DB_PREFIX_.'help_access` (`label`, `version`) VALUES (\''.pSQL($label).'\',\''.pSQL($version).'\')
-		ON DUPLICATE KEY UPDATE `version` = \''.pSQL($version).'\'
-		');
-	}
-
-	public static function getVersion($label)
-	{
-		return Db::getInstance()->getValue('
-		SELECT `version` FROM `'._DB_PREFIX_.'help_access`
-		WHERE `label` = \''.pSQL($label).'\'
-		');
-	}
-
-	public static function retrieveInfos($label, $iso_lang, $country, $version)
-	{
-	$image = self::$_images[0];
-	$tooltip = '';
-	$url = HelpAccess::URL.'/documentation/renderIcon?label='.$label.'&iso_lang='.$iso_lang.'&country='.$country.'&version='.$version;
-
-	$ctx = @stream_context_create(array('http' => array('timeout' => 10)));
-
-		$res = @file_get_contents($url, 0, $ctx);
-
-		$infos = preg_split('/\|/', $res);
-		if (count($infos) > 0)
-		{
-			$version = trim($infos[0]);
-			if (!empty($version))
-			{
-				$image = self::$_images[1];
-
-				if (count($infos) > 1)
-					$tooltip = trim('|'.$infos[1]);
-			}
-		}
-
-		$last_version = HelpAccess::getVersion($label);
-
-		if (!empty($version) && $version != $last_version)
-			$image = self::$_images[2];
-
-		return array('version' => $version, 'image' => $image, 'tooltip' => $tooltip);
-	}
-
-    public static function displayHelp($label, $iso_lang, $country, $ps_version)
+    /**
+     * Store in the local database that the user has seen a specific help page
+     *
+     * @static
+     * @param $label
+     * @param $version
+     */
+    public static function trackClick($label, $version)
     {
-		$infos = HelpAccess::retrieveInfos($label, $iso_lang, $country, $ps_version);
-		if (array_key_exists('image', $infos) && $infos['image'] != 'none')
-		{
-			echo '
-				<a class="help-button" href="#"
-				onclick="showHelp(
-					\''.HelpAccess::URL.'\',
-					\''.Tools::htmlentitiesUTF8($label).'\',
-					\''.Tools::htmlentitiesUTF8($iso_lang).'\',
-					\''.Tools::htmlentitiesUTF8($ps_version).'\',
-					\''.Tools::htmlentitiesUTF8($infos['version']).'\',
-					\''.Tools::htmlentitiesUTF8($country).'\'
-				);" title="'.Tools::htmlentitiesUTF8($infos['tooltip']).'">
-				<img id="help-'.Tools::htmlentitiesUTF8($label).'" src="../img/admin/'.Tools::htmlentitiesUTF8($infos['image']).'" alt="" class="middle" style="margin-top: -5px"/> '.Tools::displayError('HELP').'
-				</a>
-				';
+        Db::getInstance()->execute('
+        INSERT INTO `'._DB_PREFIX_.'help_access` (`label`, `version`) VALUES (\''.pSQL($label).'\',\''.pSQL($version).'\')
+        ON DUPLICATE KEY UPDATE `version` = \''.pSQL($version).'\'
+        ');
+    }
 
-			if (!empty($infos['tooltip']))
-				echo ' <script type="text/javascript">
-					$(document).ready(function() {
-						$("a.help-button").cluetip({
-							splitTitle: "|",
-							cluetipClass: "help-button",
-							showTitle: false,
-							arrows: true,
-							dropShadow: false,
-							positionBy: "auto"
-						});
-					});
-					</script>';
-		}
+    /**
+     * Returns the last version seen of a help page seen by the user
+     *
+     * @static
+     * @param $label
+     * @return mixed
+     */
+    public static function getVersion($label)
+    {
+        return Db::getInstance()->getValue('
+        SELECT `version` FROM `'._DB_PREFIX_.'help_access`
+        WHERE `label` = \''.pSQL($label).'\'
+        ');
+    }
+
+    /**
+     * Fetch information from the help website in order to know:
+     * - if the help page exists
+     * - his version
+     * - the associated tooltip
+     *
+     * @static
+     * @param $label
+     * @param $iso_lang
+     * @param $country
+     * @param $version
+     *
+     * @return array
+     */
+    public static function retrieveInfos($label, $iso_lang, $country, $version)
+    {
+   	    $url = HelpAccess::URL.'/documentation/renderIcon?label='.$label.'&iso_lang='.$iso_lang.'&country='.$country.'&version='.$version;
+        $tooltip = '';
+
+        $ctx = @stream_context_create(array('http' => array('timeout' => 10)));
+        $res = @file_get_contents($url, 0, $ctx);
+
+	    $infos = preg_split('/\|/', $res);
+	    if (count($infos) > 0)
+	    {
+            $version = trim($infos[0]);
+            if (!empty($version))
+            {
+                if (count($infos) > 1)
+                    $tooltip = trim($infos[1]);
+            }
+	    }
+
+	    return array('version' => $version, 'tooltip' => $tooltip);
 	}
 }
 

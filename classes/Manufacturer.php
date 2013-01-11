@@ -20,59 +20,73 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 16875 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class ManufacturerCore extends ObjectModel
 {
-	public 		$id;
+	public $id;
+
+	/** @var integer manufacturer ID //FIXME is it really usefull...? */
+	public $id_manufacturer;
 
 	/** @var string Name */
-	public 		$name;
+	public $name;
 
-	/** @var mixed A description */
-	public 		$description;
+	/** @var string A description */
+	public $description;
 
-	/** @var mixed A short description */
-	public 		$short_description;
+	/** @var string A short description */
+	public $short_description;
 
 	/** @var int Address */
-	public 		$id_address;
+	public $id_address;
 
 	/** @var string Object creation date */
-	public 		$date_add;
+	public $date_add;
 
 	/** @var string Object last modification date */
-	public 		$date_upd;
+	public $date_upd;
 
 	/** @var string Friendly URL */
-	public 		$link_rewrite;
+	public $link_rewrite;
 
-	/** @var mixed Meta title */
-	public 		$meta_title;
+	/** @var string Meta title */
+	public $meta_title;
 
-	/** @var mixed Meta keywords */
-	public 		$meta_keywords;
+	/** @var string Meta keywords */
+	public $meta_keywords;
 
-	/** @var mixed Meta description */
-	public 		$meta_description;
+	/** @var string Meta description */
+	public $meta_description;
 
 	/** @var boolean active */
-	public		$active;
+	public $active;
 
- 	protected 	$fieldsRequired = array('name');
- 	protected 	$fieldsSize = array('name' => 64);
- 	protected 	$fieldsValidate = array('name' => 'isCatalogName');
+	/**
+	 * @see ObjectModel::$definition
+	 */
+	public static $definition = array(
+		'table' => 'manufacturer',
+		'primary' => 'id_manufacturer',
+		'multilang' => true,
+		'fields' => array(
+			'name' => 				array('type' => self::TYPE_STRING, 'validate' => 'isCatalogName', 'required' => true, 'size' => 64),
+			'active' => 			array('type' => self::TYPE_BOOL),
+			'date_add' => 			array('type' => self::TYPE_DATE),
+			'date_upd' => 			array('type' => self::TYPE_DATE),
 
-	protected	$fieldsSizeLang = array('short_description' => 254, 'meta_title' => 128, 'meta_description' => 255, 'meta_description' => 255);
-	protected	$fieldsValidateLang = array('description' => 'isString', 'short_description' => 'isString', 'meta_title' => 'isGenericName', 'meta_description' => 'isGenericName', 'meta_keywords' => 'isGenericName');
+			// Lang fields
+			'description' => 		array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isString'),
+			'short_description' => 	array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isString', 'size' => 254),
+			'meta_title' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 128),
+			'meta_description' => 	array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 255),
+			'meta_keywords' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName'),
+		),
+	);
 
-	protected 	$table = 'manufacturer';
-	protected 	$identifier = 'id_manufacturer';
-
-	protected	$webserviceParameters = array(
+	protected $webserviceParameters = array(
 		'fields' => array(
 			'active' => array(),
 			'link_rewrite' => array('getter' => 'getLink', 'setter' => false),
@@ -84,73 +98,26 @@ class ManufacturerCore extends ObjectModel
 		),
 	);
 
-	public function __construct($id = NULL, $id_lang = NULL)
+	public function __construct($id = null, $id_lang = null)
 	{
 		parent::__construct($id, $id_lang);
 
-		/* Get the manufacturer's id_address */
-		$this->id_address = $this->getManufacturerAddress();
 		$this->link_rewrite = $this->getLink();
 		$this->image_dir = _PS_MANU_IMG_DIR_;
 	}
 
-	public function getFields()
-	{
-		parent::validateFields();
-		if (isset($this->id))
-			$fields['id_manufacturer'] = (int)($this->id);
-		$fields['name'] = pSQL($this->name);
-		$fields['date_add'] = pSQL($this->date_add);
-		$fields['date_upd'] = pSQL($this->date_upd);
-		$fields['active'] = (int)($this->active);
-		return $fields;
-	}
-
-	public function getTranslationsFieldsChild()
-	{
-		$fieldsArray = array('description', 'short_description', 'meta_title', 'meta_keywords', 'meta_description');
-		$fields = array();
-		$languages = Language::getLanguages(false);
-		$defaultLanguage = _PS_LANG_DEFAULT_;
-		foreach ($languages as $language)
-		{
-			$fields[$language['id_lang']]['id_lang'] = $language['id_lang'];
-			$fields[$language['id_lang']][$this->identifier] = (int)($this->id);
-
-			foreach ($fieldsArray as $field)
-			{
-				if (!Validate::isTableOrIdentifier($field))
-					die(Tools::displayError());
-
-				/* Check fields validity */
-				if (isset($this->{$field}[$language['id_lang']]) && !empty($this->{$field}[$language['id_lang']]))
-					$fields[$language['id_lang']][$field] = pSQL($this->{$field}[$language['id_lang']], true);
-				elseif (in_array($field, $this->fieldsRequiredLang))
-					$fields[$language['id_lang']][$field] = pSQL($this->{$field}[$defaultLanguage]);
-				else
-					$fields[$language['id_lang']][$field] = '';
-
-			}
-
-			$fields[$language['id_lang']]['description'] = (isset($this->description[$language['id_lang']])) ? pSQL($this->description[$language['id_lang']], true) : '';
-			$fields[$language['id_lang']]['short_description'] = (isset($this->short_description[$language['id_lang']])) ? pSQL($this->short_description[$language['id_lang']], true) : '';
-		}
-		return $fields;
-	}
-
 	public function delete()
 	{
-		if ($this->id_address)
+		$address = new Address($this->id_address);
+
+		if (!$address->delete())
+			return false;
+
+		if (parent::delete())
 		{
-			$address = new Address((int)$this->id_address);
-			if (!Validate::isLoadedObject($address) || !$address->delete())
-				return false;
-		}
-
-		if (Db::getInstance()->Execute('UPDATE `'._DB_PREFIX_.'product` SET `id_manufacturer` = 0 WHERE `id_manufacturer` = '.(int)$this->id) && parent::delete())
+			CartRule::cleanProductRuleIntegrity('manufacturers', $this->id);
 			return $this->deleteImage();
-
-		return false;
+		}
 	}
 
 	/**
@@ -160,89 +127,99 @@ class ManufacturerCore extends ObjectModel
 	 */
 	public function deleteSelection($selection)
 	{
-		if (!is_array($selection) || !Validate::isTableOrIdentifier($this->identifier) || !Validate::isTableOrIdentifier($this->table))
+		if (!is_array($selection))
 			die(Tools::displayError());
+
 		$result = true;
-		foreach ($selection AS $id)
+		foreach ($selection as $id)
 		{
-			$this->id = (int)($id);
-			$this->id_address = self::getManufacturerAddress();
-			$result = $result AND $this->delete();
+			$this->id = (int)$id;
+			$this->id_address = Manufacturer::getManufacturerAddress();
+			$result = $result && $this->delete();
 		}
+
 		return $result;
 	}
 
 	protected function getManufacturerAddress()
 	{
-		if (!(int)($this->id))
+		if (!(int)$this->id)
 			return false;
-		$result = Db::GetInstance(_PS_USE_SQL_SLAVE_)->getRow('SELECT `id_address` FROM '._DB_PREFIX_.'address WHERE `id_manufacturer` = '.(int)($this->id));
-		if (!$result)
-			return false;
-		return $result['id_address'];
+
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('SELECT `id_address` FROM '._DB_PREFIX_.'address WHERE `id_manufacturer` = '.(int)$this->id);
 	}
 
 	/**
 	  * Return manufacturers
 	  *
-	  * @param boolean $getNbProducts [optional] return products numbers for each
+	  * @param boolean $get_nb_products [optional] return products numbers for each
 	  * @return array Manufacturers
 	  */
-	public static function getManufacturers($getNbProducts = false, $id_lang = 0, $active = true, $p = false, $n = false, $all_group = false)
+	public static function getManufacturers($get_nb_products = false, $id_lang = 0, $active = true, $p = false,
+		$n = false, $all_group = false)
 	{
 		if (!$id_lang)
-			$id_lang = (int)_PS_LANG_DEFAULT_;
-		$sql = 'SELECT m.*, ml.`description`';
-		$sql.= ' FROM `'._DB_PREFIX_.'manufacturer` m
-		LEFT JOIN `'._DB_PREFIX_.'manufacturer_lang` ml ON (m.`id_manufacturer` = ml.`id_manufacturer` AND ml.`id_lang` = '.(int)($id_lang).')
-		'.($active ? ' WHERE m.`active` = 1' : '');
-		$sql.= ' ORDER BY m.`name` ASC'.($p ? ' LIMIT '.(((int)($p) - 1) * (int)($n)).','.(int)($n) : '');
-		$manufacturers = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS($sql);
+			$id_lang = (int)Configuration::get('PS_LANG_DEFAULT');
+
+		$sql = 'SELECT m.*, ml.`description`, ml.`short_description`
+			FROM `'._DB_PREFIX_.'manufacturer` m
+			LEFT JOIN `'._DB_PREFIX_.'manufacturer_lang` ml ON (
+				m.`id_manufacturer` = ml.`id_manufacturer`
+				AND ml.`id_lang` = '.(int)$id_lang.'
+			)
+			'.Shop::addSqlAssociation('manufacturer', 'm');
+			if ($active)
+				$sql .= '
+			WHERE m.`active` = 1';
+			$sql .= '
+			GROUP BY m.id_manufacturer
+			ORDER BY m.`name` ASC'.
+			($p ? ' LIMIT '.(((int)$p - 1) * (int)$n).','.(int)$n : '');
+
+		$manufacturers = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
 		if ($manufacturers === false)
 			return false;
-		if ($getNbProducts)
+
+		if ($get_nb_products)
 		{
-			$sqlGroups = '';
+			$sql_groups = '';
 			if (!$all_group)
 			{
 				$groups = FrontController::getCurrentCustomerGroups();
-				$sqlGroups = (count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1');
+				$sql_groups = (count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1');
 			}
+
 			foreach ($manufacturers as $key => $manufacturer)
 			{
-				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('SELECT p.`id_product`
-				FROM `'._DB_PREFIX_.'product` p
-				LEFT JOIN `'._DB_PREFIX_.'manufacturer` as m ON (m.`id_manufacturer`= p.`id_manufacturer`)
-				WHERE m.`id_manufacturer` = '.(int)($manufacturer['id_manufacturer']).
-				($active ? ' AND p.`active` = 1 ' : '').
-				($all_group ? '' : ' AND p.`id_product` IN (
-					SELECT cp.`id_product`
-					FROM `'._DB_PREFIX_.'category_group` cg
-					LEFT JOIN `'._DB_PREFIX_.'category_product` cp ON (cp.`id_category` = cg.`id_category`)
-					WHERE cg.`id_group` '.$sqlGroups.')'));
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
+					'SELECT p.`id_product`
+					FROM `'._DB_PREFIX_.'product` p
+					'.Shop::addSqlAssociation('product', 'p').'
+					LEFT JOIN `'._DB_PREFIX_.'manufacturer` as m ON (m.`id_manufacturer`= p.`id_manufacturer`)
+					WHERE m.`id_manufacturer` = '.(int)$manufacturer['id_manufacturer'].
+					($active ? ' AND product_shop.`active` = 1 ' : '').
+					($all_group ? '' : ' AND p.`id_product` IN (
+						SELECT cp.`id_product`
+						FROM `'._DB_PREFIX_.'category_group` cg
+						LEFT JOIN `'._DB_PREFIX_.'category_product` cp ON (cp.`id_category` = cg.`id_category`)
+						WHERE cg.`id_group` '.$sql_groups.'
+					)')
+				);
 
-				$manufacturers[$key]['nb_products'] = sizeof($result);
+				$manufacturers[$key]['nb_products'] = count($result);
 			}
 		}
+
+		$total_manufacturers = count($manufacturers);
 		$rewrite_settings = (int)Configuration::get('PS_REWRITING_SETTINGS');
-		for ($i = 0; $i < sizeof($manufacturers); $i++)
+
+		for ($i = 0; $i < $total_manufacturers; $i++)
 			if ($rewrite_settings)
 				$manufacturers[$i]['link_rewrite'] = Tools::link_rewrite($manufacturers[$i]['name'], false);
 			else
 				$manufacturers[$i]['link_rewrite'] = 0;
-		return $manufacturers;
-	}
 
-	/**
-	 * @deprecated
-	 */
-	public static function getManufacturersWithoutAddress()
-	{
-		Tools::displayAsDeprecated();
-		$sql = 'SELECT m.* FROM `'._DB_PREFIX_.'manufacturer` m
-				LEFT JOIN `'._DB_PREFIX_.'address` a ON (a.`id_manufacturer` = m.`id_manufacturer` AND a.`deleted` = 0)
-				WHERE a.`id_manufacturer` IS NULL';
-		return Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS($sql);
+		return $manufacturers;
 	}
 
 	/**
@@ -256,18 +233,26 @@ class ManufacturerCore extends ObjectModel
 	{
 		if (!isset(self::$cacheName[$id_manufacturer]))
 			self::$cacheName[$id_manufacturer] = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('
-			SELECT `name` FROM `'._DB_PREFIX_.'manufacturer` WHERE `id_manufacturer` = '.(int)($id_manufacturer).' AND `active` = 1');
+				SELECT `name`
+				FROM `'._DB_PREFIX_.'manufacturer`
+				WHERE `id_manufacturer` = '.(int)$id_manufacturer.'
+				AND `active` = 1'
+			);
+
 		return self::$cacheName[$id_manufacturer];
 	}
 
 	public static function getIdByName($name)
 	{
 		$result = Db::getInstance()->getRow('
-		SELECT `id_manufacturer`
-		FROM `'._DB_PREFIX_.'manufacturer`
-		WHERE `name` = \''.pSQL($name).'\'');
+			SELECT `id_manufacturer`
+			FROM `'._DB_PREFIX_.'manufacturer`
+			WHERE `name` = \''.pSQL($name).'\''
+		);
+
 		if (isset($result['id_manufacturer']))
-			return (int)($result['id_manufacturer']);
+			return (int)$result['id_manufacturer'];
+
 		return false;
 	}
 
@@ -276,74 +261,136 @@ class ManufacturerCore extends ObjectModel
 		return Tools::link_rewrite($this->name, false);
 	}
 
-	public static function getProducts($id_manufacturer, $id_lang, $p, $n, $orderBy = NULL, $orderWay = NULL, $getTotal = false, $active = true, $active_category = true)
+	public static function getProducts($id_manufacturer, $id_lang, $p, $n, $order_by = null, $order_way = null,
+		$get_total = false, $active = true, $active_category = true, Context $context = null)
 	{
-		if ($p < 1) $p = 1;
-	 	if (empty($orderBy) ||$orderBy == 'position') $orderBy = 'name';
-	 	if (empty($orderWay)) $orderWay = 'ASC';
+		if (!$context)
+			$context = Context::getContext();
 
-		if (!Validate::isOrderBy($orderBy) OR !Validate::isOrderWay($orderWay))
+		$front = true;
+		if (!in_array($context->controller->controller_type, array('front', 'modulefront')))
+			$front = false;
+			
+		if ($p < 1)
+			$p = 1;
+
+	 	if (empty($order_by) || $order_by == 'position')
+	 		$order_by = 'name';
+
+	 	if (empty($order_way)) $order_way = 'ASC';
+
+		if (!Validate::isOrderBy($order_by) || !Validate::isOrderWay($order_way))
 			die (Tools::displayError());
 
 		$groups = FrontController::getCurrentCustomerGroups();
-		$sqlGroups = (count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1');
+		$sql_groups = count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1';
 
 		/* Return only the number of products */
-		if ($getTotal)
-			return (int)Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('
-			SELECT COUNT(*)
-			FROM `'._DB_PREFIX_.'product` p
-			WHERE p.id_manufacturer = '.(int)($id_manufacturer)
-			.($active ? ' AND p.`active` = 1' : '').'
-			AND p.`id_product` IN (
-				SELECT cp.`id_product`
-				FROM `'._DB_PREFIX_.'category_group` cg
-				LEFT JOIN `'._DB_PREFIX_.'category_product` cp ON (cp.`id_category` = cg.`id_category`)'.
-				($active_category ? ' INNER JOIN `'._DB_PREFIX_.'category` ca ON cp.`id_category` = ca.`id_category` AND ca.`active` = 1' : '').'
-				WHERE cg.`id_group` '.$sqlGroups.')');
-
-		$sql = '
-		SELECT p.*, pa.`id_product_attribute`, pl.`description`, pl.`description_short`, pl.`link_rewrite`, pl.`meta_description`,
-		pl.`meta_keywords`, pl.`meta_title`, pl.`name`, i.`id_image`, il.`legend`, m.`name` manufacturer_name, tl.`name` tax_name,
-		t.`rate`, DATEDIFF(p.`date_add`, DATE_SUB(NOW(), INTERVAL '.(Validate::isUnsignedInt(Configuration::get('PS_NB_DAYS_NEW_PRODUCT')) ? Configuration::get('PS_NB_DAYS_NEW_PRODUCT') : 20).' DAY)) > 0 new
-		FROM `'._DB_PREFIX_.'product` p
-		LEFT JOIN `'._DB_PREFIX_.'product_attribute` pa ON (p.`id_product` = pa.`id_product` AND default_on = 1)
-		LEFT JOIN `'._DB_PREFIX_.'product_lang` pl ON (p.`id_product` = pl.`id_product` AND pl.`id_lang` = '.(int)$id_lang.')
-		LEFT JOIN `'._DB_PREFIX_.'image` i ON (i.`id_product` = p.`id_product` AND i.`cover` = 1)
-		LEFT JOIN `'._DB_PREFIX_.'image_lang` il ON (i.`id_image` = il.`id_image` AND il.`id_lang` = '.(int)$id_lang.')
-		LEFT JOIN `'._DB_PREFIX_.'tax_rule` tr ON (p.`id_tax_rules_group` = tr.`id_tax_rules_group`
-		                                           AND tr.`id_country` = '.(int)Country::getDefaultCountryId().'
-	                                           	   AND tr.`id_state` = 0)
-	    LEFT JOIN `'._DB_PREFIX_.'tax` t ON (t.`id_tax` = tr.`id_tax`)
-		LEFT JOIN `'._DB_PREFIX_.'tax_lang` tl ON (t.`id_tax` = tl.`id_tax` AND tl.`id_lang` = '.(int)($id_lang).')
-		LEFT JOIN `'._DB_PREFIX_.'manufacturer` m ON m.`id_manufacturer` = p.`id_manufacturer`
-		WHERE p.`id_manufacturer` = '.(int)($id_manufacturer).($active ? ' AND p.`active` = 1' : '').'
-		AND p.`id_product` IN (
+		if ($get_total)
+		{
+			$sql = '
+				SELECT p.`id_product`
+				FROM `'._DB_PREFIX_.'product` p
+				'.Shop::addSqlAssociation('product', 'p').'
+				WHERE p.id_manufacturer = '.(int)$id_manufacturer
+				.($active ? ' AND product_shop.`active` = 1' : '').'
+				'.($front ? ' AND product_shop.`visibility` IN ("both", "catalog")' : '').'
+				AND p.`id_product` IN (
 					SELECT cp.`id_product`
 					FROM `'._DB_PREFIX_.'category_group` cg
 					LEFT JOIN `'._DB_PREFIX_.'category_product` cp ON (cp.`id_category` = cg.`id_category`)'.
 					($active_category ? ' INNER JOIN `'._DB_PREFIX_.'category` ca ON cp.`id_category` = ca.`id_category` AND ca.`active` = 1' : '').'
-					WHERE cg.`id_group` '.$sqlGroups.'
-				)
-		ORDER BY '.(($orderBy == 'id_product') ? 'p.' : '').'`'.pSQL($orderBy).'` '.pSQL($orderWay).'
-		LIMIT '.(((int)($p) - 1) * (int)($n)).','.(int)($n);
+					WHERE cg.`id_group` '.$sql_groups.'
+				)';
 
-		$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS($sql);
+			$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
+			return (int)count($result);
+		}
+		if (strpos($order_by, '.') > 0)
+		{
+			$order_by = explode('.', $order_by);
+			$order_by = pSQL($order_by[0]).'.`'.pSQL($order_by[1]).'`';
+		}
+		$alias = '';
+		if ($order_by == 'price')
+			$alias = 'product_shop.';
+		elseif ($order_by == 'name')
+			$alias = 'pl.';
+		elseif ($order_by == 'quantity')
+			$alias = 'stock.';
+		else
+			$alias = 'p.';
+		$sql = 'SELECT p.*, product_shop.*, stock.out_of_stock, IFNULL(stock.quantity, 0) as quantity, pa.`id_product_attribute`,
+					pl.`description`, pl.`description_short`, pl.`link_rewrite`, pl.`meta_description`, pl.`meta_keywords`,
+					pl.`meta_title`, pl.`name`, image_shop.`id_image`, il.`legend`, m.`name` AS manufacturer_name,
+					DATEDIFF(
+						product_shop.`date_add`,
+						DATE_SUB(
+							NOW(),
+							INTERVAL '.(Validate::isUnsignedInt(Configuration::get('PS_NB_DAYS_NEW_PRODUCT')) ? Configuration::get('PS_NB_DAYS_NEW_PRODUCT') : 20).' DAY
+						)
+					) > 0 AS new
+				FROM `'._DB_PREFIX_.'product` p
+				'.Shop::addSqlAssociation('product', 'p').'
+				LEFT JOIN `'._DB_PREFIX_.'product_attribute` pa
+					ON (p.`id_product` = pa.`id_product`)
+				'.Shop::addSqlAssociation('product_attribute', 'pa', false).'
+				LEFT JOIN `'._DB_PREFIX_.'product_lang` pl
+					ON (p.`id_product` = pl.`id_product` AND pl.`id_lang` = '.(int)$id_lang.Shop::addSqlRestrictionOnLang('pl').')
+				LEFT JOIN `'._DB_PREFIX_.'image` i
+					ON (i.`id_product` = p.`id_product`)'.
+				Shop::addSqlAssociation('image', 'i', false, 'image_shop.cover=1').'
+				LEFT JOIN `'._DB_PREFIX_.'image_lang` il
+					ON (i.`id_image` = il.`id_image` AND il.`id_lang` = '.(int)$id_lang.')
+				LEFT JOIN `'._DB_PREFIX_.'manufacturer` m
+					ON (m.`id_manufacturer` = p.`id_manufacturer`)
+				'.Product::sqlStock('p', 0).'
+				WHERE p.`id_manufacturer` = '.(int)$id_manufacturer.'
+				'.($active ? ' AND product_shop.`active` = 1' : '').'
+				'.($front ? ' AND product_shop.`visibility` IN ("both", "catalog")' : '').'
+				AND (product_attribute_shop.default_on = 1 OR product_attribute_shop.default_on IS NULL)
+				AND p.`id_product` IN (
+					SELECT cp.`id_product`
+					FROM `'._DB_PREFIX_.'category_group` cg
+					LEFT JOIN `'._DB_PREFIX_.'category_product` cp
+						ON (cp.`id_category` = cg.`id_category`)'.
+					($active_category ? ' INNER JOIN `'._DB_PREFIX_.'category` ca ON cp.`id_category` = ca.`id_category` AND ca.`active` = 1' : '').'
+					WHERE cg.`id_group` '.$sql_groups.'
+				)
+				AND ((image_shop.id_image IS NOT NULL OR i.id_image IS NULL) OR (image_shop.id_image IS NULL AND i.cover=1))
+				ORDER BY '.$alias.pSQL($order_by).' '.pSQL($order_way).'
+				LIMIT '.(((int)$p - 1) * (int)$n).','.(int)$n;
+
+		$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
+
 		if (!$result)
 			return false;
-		if ($orderBy == 'price')
-			Tools::orderbyPrice($result, $orderWay);
+
+		if ($order_by == 'price')
+			Tools::orderbyPrice($result, $order_way);
+
 		return Product::getProductsProperties($id_lang, $result);
 	}
 
 	public function getProductsLite($id_lang)
 	{
-		return Db::getInstance()->ExecuteS('
+		$context = Context::getContext();
+		$front = true;
+		if (!in_array($context->controller->controller_type, array('front', 'modulefront')))
+			$front = false;
+			
+		return Db::getInstance()->executeS('
 		SELECT p.`id_product`,  pl.`name`
 		FROM `'._DB_PREFIX_.'product` p
-		LEFT JOIN `'._DB_PREFIX_.'product_lang` pl ON (p.`id_product` = pl.`id_product` AND pl.`id_lang` = '.(int)($id_lang).')
-		WHERE p.`id_manufacturer` = '.(int)($this->id));
+		'.Shop::addSqlAssociation('product', 'p').'
+		LEFT JOIN `'._DB_PREFIX_.'product_lang` pl ON (
+			p.`id_product` = pl.`id_product`
+			AND pl.`id_lang` = '.(int)$id_lang.$context->shop->addSqlRestrictionOnLang('pl').'
+		)
+		WHERE p.`id_manufacturer` = '.(int)$this->id.
+		($front ? ' AND product_shop.`visibility` IN ("both", "catalog")' : ''));
 	}
+
 	/*
 	* Specify if a manufacturer already in base
 	*
@@ -353,51 +400,63 @@ class ManufacturerCore extends ObjectModel
 	public static function manufacturerExists($id_manufacturer)
 	{
 		$row = Db::getInstance()->getRow('
-		SELECT `id_manufacturer`
-		FROM '._DB_PREFIX_.'manufacturer m
-		WHERE m.`id_manufacturer` = '.(int)($id_manufacturer));
+			SELECT `id_manufacturer`
+			FROM '._DB_PREFIX_.'manufacturer m
+			WHERE m.`id_manufacturer` = '.(int)$id_manufacturer
+		);
 
 		return isset($row['id_manufacturer']);
 	}
 
 	public function getAddresses($id_lang)
 	{
-		return Db::getInstance()->ExecuteS('
-		SELECT a.*, cl.name AS `country`, s.name AS `state`
-		FROM `'._DB_PREFIX_.'address` AS a
-		LEFT JOIN `'._DB_PREFIX_.'country_lang` AS cl ON (cl.`id_country` = a.`id_country` AND cl.`id_lang` = '.(int)($id_lang).')
-		LEFT JOIN `'._DB_PREFIX_.'state` AS s ON (s.`id_state` = a.`id_state`)
-		WHERE `id_manufacturer` = '.(int)($this->id).'
-		AND a.`deleted` = 0');
+		return Db::getInstance()->executeS('
+			SELECT a.*, cl.name AS `country`, s.name AS `state`
+			FROM `'._DB_PREFIX_.'address` AS a
+			LEFT JOIN `'._DB_PREFIX_.'country_lang` AS cl ON (
+				cl.`id_country` = a.`id_country`
+				AND cl.`id_lang` = '.(int)$id_lang.'
+			)
+			LEFT JOIN `'._DB_PREFIX_.'state` AS s ON (s.`id_state` = a.`id_state`)
+			WHERE `id_manufacturer` = '.(int)$this->id.'
+			AND a.`deleted` = 0'
+		);
 	}
 
 	public function getWsAddresses()
 	{
-			return Db::getInstance()->ExecuteS('
-		SELECT a.id_address as id
-		FROM `'._DB_PREFIX_.'address` AS a
-		WHERE `id_manufacturer` = '.(int)($this->id).'
-		AND a.`deleted` = 0');
+		return Db::getInstance()->executeS('
+			SELECT a.id_address as id
+			FROM `'._DB_PREFIX_.'address` AS a
+			'.Shop::addSqlAssociation('manufacturer', 'a').'
+			WHERE a.`id_manufacturer` = '.(int)$this->id.'
+			AND a.`deleted` = 0'
+		);
 	}
 
 	public function setWsAddresses($id_addresses)
 	{
 		$ids = array();
+
 		foreach ($id_addresses as $id)
 			$ids[] = (int)$id['id'];
-		$result1 = (Db::getInstance()->Execute('
+
+		$result1 = (Db::getInstance()->execute('
 			UPDATE `'._DB_PREFIX_.'address`
 			SET id_manufacturer = 0
 			WHERE id_manufacturer = '.(int)$this->id.'
-			AND deleted = 0') !== false);
+			AND deleted = 0') !== false
+		);
+
 		$result2 = true;
 		if (count($ids))
-			$result2 = (Db::getInstance()->Execute('
-			UPDATE `'._DB_PREFIX_.'address`
-			SET id_customer = 0, id_supplier = 0, id_manufacturer = '.(int)$this->id.'
-			WHERE id_address IN('.implode(',', $ids).')
-			AND deleted = 0') !== false);
+			$result2 = (Db::getInstance()->execute('
+				UPDATE `'._DB_PREFIX_.'address`
+				SET id_customer = 0, id_supplier = 0, id_manufacturer = '.(int)$this->id.'
+				WHERE id_address IN('.implode(',', $ids).')
+				AND deleted = 0') !== false
+			);
+
 		return ($result1 && $result2);
 	}
 }
-

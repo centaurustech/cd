@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,7 +32,7 @@ function show_countries($id_lang, $nb_by_line = 7)
 
 	$output = '<style type="text/css">.country{cursor: pointer;} .country:hover{text-decoration: underline;}</style>
 			<script type="text/javascript">$(document).ready(_registerClickOnCountry);</script>';
-	$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('SELECT cl.`id_country`, `name`, `iso_code` FROM `'._DB_PREFIX_.'country_lang` cl 
+	$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('SELECT cl.`id_country`, `name`, `iso_code` FROM `'._DB_PREFIX_.'country_lang` cl 
 								LEFT JOIN `'._DB_PREFIX_.'country` c ON  c.`id_country` = cl.`id_country` 
 								WHERE `id_lang` = \''.(int)($id_lang).'\' ORDER BY `name` ASC;');
 	$separator = 0;
@@ -56,7 +55,7 @@ function show_buttons($id_lang, $id_country)
 	$output = '<script type="text/javascript">$(document).ready(_registerClickButtons);</script>
 	<span id="selectinfo" style="text-align: center;"></span> ';
 
-	$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->ExecuteS('SELECT cl.`id_country`, `name`, `iso_code`, `x`, `y` FROM `'._DB_PREFIX_.'country_lang` cl 
+	$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('SELECT cl.`id_country`, `name`, `iso_code`, `x`, `y` FROM `'._DB_PREFIX_.'country_lang` cl 
 								LEFT JOIN `'._DB_PREFIX_.'country` c ON  c.`id_country` = cl.`id_country` 
 								LEFT JOIN `'._DB_PREFIX_.'location_coords` lc ON  c.`id_country` = lc.`id_country` 
 								WHERE `id_lang` = \''.(int)($id_lang).'\' AND cl.`id_country`= \''.(int)($id_country).'\';');
@@ -80,8 +79,8 @@ function insert_coords($id_lang, $id_country, $x, $y)
 {
 	if (!is_numeric($id_lang) || !is_numeric($id_country) || !is_numeric($x) || !is_numeric($y))
 		return ("error");
-	Db::getInstance()->Execute('DELETE FROM `'._DB_PREFIX_.'location_coords` WHERE `id_country` = \''.$id_country.'\';');
-	if (!Db::getInstance()->Execute('INSERT INTO `'._DB_PREFIX_.'location_coords` (`x`, `y`, `id_country`) VALUES (\''.(int)($x).'\', \''.(int)($y).'\', \''.(int)($id_country).'\');'))
+	Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'location_coords` WHERE `id_country` = \''.$id_country.'\';');
+	if (!Db::getInstance()->execute('INSERT INTO `'._DB_PREFIX_.'location_coords` (`x`, `y`, `id_country`) VALUES (\''.(int)($x).'\', \''.(int)($y).'\', \''.(int)($id_country).'\');'))
 		echo("error while inserting data<br />");
 	return (show_countries($id_lang));
 }
@@ -94,12 +93,12 @@ if ($option == 1)
 {
 	echo show_countries($id_lang);
 }
-elseif ($option == 2)
+else if ($option == 2)
 {
 	$id_country = Tools::getValue('id_country');
 	echo show_buttons($id_lang, $id_country);
 }
-elseif ($option == 3)
+else if ($option == 3)
 {
 	$id_country = Tools::getValue('id_country');
 	$x = Tools::getValue('x');

@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14011 $
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,12 +32,15 @@ require_once(dirname(__FILE__).'/../../init.php');
 
 include_once(dirname(__FILE__).'/LoyaltyModule.php');
 include_once(dirname(__FILE__).'/LoyaltyStateModule.php');
+include_once(dirname(__FILE__).'/loyalty.php');
 
-if (!$cookie->isLogged())
-	Tools::redirect('authentication.php?back=modules/loyalty/loyalty-program.php');
+Tools::displayFileAsDeprecated();
 
-Tools::addCSS(_PS_CSS_DIR_.'jquery.cluetip.css', 'all');
-Tools::addJS(array(_PS_JS_DIR_.'jquery/jquery.dimensions.js',_PS_JS_DIR_.'jquery/jquery.cluetip.js'));
+$context = Context::getContext();
+if (!$context->customer->isLogged())
+	Tools::redirect('index.php?controller=authentication&back=modules/loyalty/loyalty-program.php');
+
+$context->controller->addJqueryPlugin(array('dimensions', 'cluetip'));
 
 $customerPoints = (int)(LoyaltyModule::getPointsByCustomer((int)($cookie->id_customer)));
 
@@ -47,59 +49,57 @@ if (Tools::getValue('transform-points') == 'true' AND $customerPoints > 0)
 {
 	/* Generate a voucher code */
 	$voucherCode = NULL;
-	do $voucherCode = 'FID'.rand(1000, 100000);
-	while (Discount::discountExists($voucherCode));
+	do
+		$voucherCode = 'FID'.rand(1000, 100000);
+	while (CartRule::cartRuleExists($voucherCode));
 
 	/* Voucher creation and affectation to the customer */
-	$voucher = new Discount();
-	$voucher->name = $voucherCode;
-	$voucher->id_discount_type = 2; // Discount on order (amount)
-	$voucher->id_customer = (int)($cookie->id_customer);
-	$voucher->id_currency = (int)($cookie->id_currency);
-	$voucher->value = LoyaltyModule::getVoucherValue((int)$customerPoints);
-	$voucher->quantity = 1;
-	$voucher->quantity_per_user = 1;
-	$voucher->cumulable = 1;
-	$voucher->cumulable_reduction = 1;
-	
-	/* If merchandise returns are allowed, the voucher musn't be usable before this max return date */	
+	$cartRule = new CartRule();
+	$cartRule->code = $voucherCode;
+	$cartRule->id_customer = (int)$context->customer->id;
+	$cartRule->id_currency = (int)$context->currency->id;
+	$cartRule->reduction_amount = LoyaltyModule::getVoucherValue((int)$customerPoints);
+	$cartRule->quantity = 1;
+	$cartRule->quantity_per_user = 1;
+
+	/* If merchandise returns are allowed, the voucher musn't be usable before this max return date */
 	$dateFrom = Db::getInstance()->getValue('
 	SELECT UNIX_TIMESTAMP(date_add) n
-	FROM '._DB_PREFIX_.'loyalty 
-	WHERE id_discount = 0 AND id_customer = '.(int)$cookie->id_customer.'
+	FROM '._DB_PREFIX_.'loyalty
+	WHERE id_cart_rule = 0 AND id_customer = '.(int)$cookie->id_customer.'
 	ORDER BY date_add DESC');
-	
+
 	if (Configuration::get('PS_ORDER_RETURN'))
 		$dateFrom += 60 * 60 * 24 * (int)Configuration::get('PS_ORDER_RETURN_NB_DAYS');
 
-	$voucher->date_from = date('Y-m-d H:i:s', $dateFrom);
-	$voucher->date_to = date('Y-m-d H:i:s', $dateFrom + 31536000); // + 1 year
-	
-	$voucher->minimal = (float)Configuration::get('PS_LOYALTY_MINIMAL');
-	$voucher->active = 1;
+	$cartRule->date_from = date('Y-m-d H:i:s', $dateFrom);
+	$cartRule->date_to = date('Y-m-d H:i:s', $dateFrom + 31536000); // + 1 year
+
+	$cartRule->minimum_amount = (float)Configuration::get('PS_LOYALTY_MINIMAL');
+	$cartRule->active = 1;
 
 	$categories = Configuration::get('PS_LOYALTY_VOUCHER_CATEGORY');
 	if ($categories != '' AND $categories != 0)
 		$categories = explode(',', Configuration::get('PS_LOYALTY_VOUCHER_CATEGORY'));
 	else
-		die(Tools::displayError());
+		die (Tools::displayError());
 
 	$languages = Language::getLanguages(true);
-	$default_text = Configuration::get('PS_LOYALTY_VOUCHER_DETAILS', (int)(Configuration::get('PS_LANG_DEFAULT')));
-	
+	$default_text = Configuration::get('PS_LOYALTY_VOUCHER_DETAILS', (int)Configuration::get('PS_LANG_DEFAULT'));
+
 	foreach ($languages AS $language)
 	{
-		$text = Configuration::get('PS_LOYALTY_VOUCHER_DETAILS', (int)($language['id_lang']));
-		$voucher->description[(int)($language['id_lang'])] = $text ? strval($text) : strval($default_text);
+		$text = Configuration::get('PS_LOYALTY_VOUCHER_DETAILS', (int)$language['id_lang']);
+		$cartRule->name[(int)$language['id_lang']] = $text ? strval($text) : strval($default_text);
 	}
-	
+
 	if (is_array($categories) AND sizeof($categories))
-		$voucher->add(true, false, $categories);
+		$cartRule->add(true, false, $categories);
 	else
-		$voucher->add();
+		$cartRule->add();
 
 	/* Register order(s) which contributed to create this voucher */
-	LoyaltyModule::registerDiscount($voucher);
+	LoyaltyModule::registerDiscount($cartRule);
 
 	Tools::redirect('modules/loyalty/loyalty-program.php');
 }
@@ -113,7 +113,7 @@ $smarty->assign(array(
 	'displayorders' => $displayorders,
 	'pagination_link' => __PS_BASE_URI__.'modules/loyalty/loyalty-program.php',
 	'totalPoints' => (int)$customerPoints,
-	'voucher' => LoyaltyModule::getVoucherValue($customerPoints, (int)($cookie->id_currency)),
+	'voucher' => LoyaltyModule::getVoucherValue($customerPoints, (int)$context->currency->id),
 	'validation_id' => LoyaltyStateModule::getValidationId(),
 	'transformation_allowed' => $customerPoints > 0,
 	'page' => ((int)(Tools::getValue('p')) > 0 ? (int)(Tools::getValue('p')) : 1),
@@ -125,13 +125,13 @@ $smarty->assign(array(
 /* Discounts */
 $nbDiscounts = 0;
 $discounts = array();
-if ($ids_discount = LoyaltyModule::getDiscountByIdCustomer((int)($cookie->id_customer)))
+if ($ids_discount = LoyaltyModule::getDiscountByIdCustomer((int)$cookie->id_customer))
 {
 	$nbDiscounts = count($ids_discount);
 	foreach ($ids_discount AS $key => $discount)
 	{
-		$discounts[$key] = new Discount((int)$discount['id_discount'], (int)($cookie->id_lang));
-		$discounts[$key]->orders = LoyaltyModule::getOrdersByIdDiscount((int)$discount['id_discount']);
+		$discounts[$key] = new Discount((int)$discount['id_cart_rule'], (int)$cookie->id_lang);
+		$discounts[$key]->orders = LoyaltyModule::getOrdersByIdDiscount((int)$discount['id_cart_rule']);
 	}
 }
 
@@ -154,13 +154,14 @@ else
 		$categoriesNames = Tools::truncate(implode(', ', $categoriesNames), 100).'.';
 	else
 		$categoriesNames = null;
-}	
+}
 $smarty->assign(array(
 	'nbDiscounts' => (int)$nbDiscounts,
 	'discounts' => $discounts,
 	'minimalLoyalty' => (float)Configuration::get('PS_LOYALTY_MINIMAL'),
 	'categories' => $categoriesNames));
 
-echo Module::display(dirname(__FILE__).'/loyalty.php', 'loyalty.tpl');
+$loyalty = new Loyalty();
+echo $loyalty->display(dirname(__FILE__).'/loyalty.php', 'loyalty.tpl');
 
 include(dirname(__FILE__).'/../../footer.php');

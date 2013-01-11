@@ -20,7 +20,6 @@
 *
 *  @author PrestaShop SA <contact@prestashop.com>
 *  @copyright  2007-2012 PrestaShop SA
-*  @version  Release: $Revision: 14001 $
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,38 +27,35 @@
 class ChartCore
 {
 	protected static $poolId = 0;
-	
+
 	protected $width = 600;
 	protected $height = 300;
-	
+
 	// Time mode
 	protected $timeMode = false;
 	protected $from;
 	protected $to;
 	protected $format;
 	protected $granularity;
-	
+
 	protected $curves = array();
-	
+
 	/** @prototype void public static function init(void) */
 	public static function init()
 	{
 		if (!self::$poolId)
 		{
 			++self::$poolId;
-			echo '
-		    <!--[if IE]><script type="text/javascript" src="'.PS_BASE_URI.'js/jquery/excanvas.min.js"></script><![endif]-->
-		    <script type="text/javascript" src="'.PS_BASE_URI.'js/jquery/jquery.flot.min.js"></script>';
+			return true;
 		}
 	}
-	
+
 	/** @prototype void public function __construct() */
 	public function __construct()
 	{
-		self::init();
 		++self::$poolId;
 	}
-	
+
 	/** @prototype void public function setSize(int $width, int $height) */
 	public function setSize($width, $height)
 	{
@@ -71,14 +67,14 @@ class ChartCore
 	public function setTimeMode($from, $to, $granularity)
 	{
 		$this->granularity = $granularity;
-	
+
 		if (Validate::isDate($from))
 			$from = strtotime($from);
 		$this->from = $from;
 		if (Validate::isDate($to))
 			$to = strtotime($to);
 		$this->to = $to;
-		
+
 		if ($granularity == 'd')
 			$this->format = '%d/%m/%y';
 		if ($granularity == 'w')
@@ -87,21 +83,25 @@ class ChartCore
 			$this->format = '%m/%y';
 		if ($granularity == 'y')
 			$this->format = '%y';
-			
+
 		$this->timeMode = true;
 	}
-	
+
 	public function getCurve($i)
 	{
 		if (!array_key_exists($i, $this->curves))
 			$this->curves[$i] = new Curve();
 		return $this->curves[$i];
 	}
-	
+
 	/** @prototype void public function display() */
 	public function display()
 	{
-		$options = '';
+		echo $this->fetch();
+	}
+
+	public function fetch()
+	{
 		if ($this->timeMode)
 		{
 			$options = 'xaxis:{mode:"time",timeformat:\''.addslashes($this->format).'\',min:'.$this->from.'000,max:'.$this->to.'000}';
@@ -111,13 +111,13 @@ class ChartCore
 						if (!$curve->getPoint($i))
 							$curve->setPoint($i, 0);
 		}
-		
+
 		$jsCurves = array();
 		foreach ($this->curves as $curve)
 			$jsCurves[] = $curve->getValues($this->timeMode);
 
 		if (count($jsCurves))
-			echo '
+			return '
 			<div id="flot'.self::$poolId.'" style="width:'.$this->width.'px;height:'.$this->height.'px"></div>
 			<script type="text/javascript">
 				$(function () {
@@ -125,7 +125,7 @@ class ChartCore
 				});
 			</script>';
 		else
-			echo ErrorFacade::Display(PS_ERROR_UNDEFINED, 'No values for this chart.');
+			return ErrorFacade::Display(PS_ERROR_UNDEFINED, 'No values for this chart.');
 	}
 }
 
@@ -141,12 +141,12 @@ class Curve
 		$this->values = $values;
 	}
 
-	public function getValues($timeMode = false)
+	public function getValues($time_mode = false)
 	{
 		ksort($this->values);
 		$string = '';
 		foreach ($this->values as $key => $value)
-			$string .= '['.addslashes((string)$key).($timeMode ? '000' : '').','.(float)$value.'],';
+			$string .= '['.addslashes((string)$key).($time_mode ? '000' : '').','.(float)$value.'],';
 		return '{data:['.rtrim($string, ',').']'.(!empty($this->label) ? ',label:"'.$this->label.'"' : '').''.(!empty($this->type) ? ','.$this->type : '').'}';
 	}
 
@@ -155,21 +155,21 @@ class Curve
 	{
 		$this->values[(string)$x] = (float)$y;
 	}
-	
+
 	public function setLabel($label)
 	{
 		$this->label = $label;
 	}
-	
+
 	public function setType($type)
 	{
 		$this->type = '';
 		if ($type == 'bars')
-			$this->type = 'bars:{show:true}';
+			$this->type = 'bars:{show:true,lineWidth:10}';
 		if ($type == 'steps')
 			$this->type = 'lines:{show:true,steps:true}';
 	}
-	
+
 	public function getPoint($x)
 	{
 		if (array_key_exists((string)$x, $this->values))
